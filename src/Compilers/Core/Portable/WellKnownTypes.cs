@@ -312,6 +312,7 @@ namespace Microsoft.CodeAnalysis
         System_Runtime_CompilerServices_NativeIntegerAttribute,
 
         Microsoft_CSharp_Expressions_CSharpExpression,
+        Microsoft_CSharp_Expressions_ParameterAssignment,
 
         NextAvailable,
 
@@ -617,6 +618,7 @@ namespace Microsoft.CodeAnalysis
             "System.Runtime.CompilerServices.NativeIntegerAttribute",
 
             "Microsoft.CSharp.Expressions.CSharpExpression",
+            "Microsoft.CSharp.Expressions.ParameterAssignment",
         };
 
         private readonly static Dictionary<string, WellKnownType> s_nameToTypeIdMap = new Dictionary<string, WellKnownType>((int)Count);
@@ -663,7 +665,6 @@ namespace Microsoft.CodeAnalysis
 
                 int separator = name.IndexOf('`');
                 if (separator >= 0)
-
                 {
                     // Ignore type parameter qualifier for generic types.
                     name = name.Substring(0, separator);

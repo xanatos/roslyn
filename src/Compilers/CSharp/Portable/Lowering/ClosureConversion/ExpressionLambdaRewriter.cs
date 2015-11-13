@@ -46,6 +46,19 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
+        private NamedTypeSymbol _CSharpParameterAssignment;
+        private NamedTypeSymbol CSharpParameterAssignment
+        {
+            get
+            {
+                if ((object)_CSharpParameterAssignment == null)
+                {
+                    _CSharpParameterAssignment = _bound.WellKnownType(WellKnownType.Microsoft_CSharp_Expressions_ParameterAssignment);
+                }
+                return _CSharpParameterAssignment;
+            }
+        }
+
         private NamedTypeSymbol _ParameterExpressionType;
         private NamedTypeSymbol ParameterExpressionType
         {
@@ -607,14 +620,50 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
             else
             {
-                // Generate Expression.Call(Receiver, Method, [typeArguments,] arguments)
-                var method = node.Method;
-                return ExprFactory(
-                    "Call",
-                    method.RequiresInstanceReceiver ? Visit(node.ReceiverOpt) : _bound.Null(ExpressionType),
-                    _bound.MethodInfo(method),
-                    Expressions(node.Arguments));
+                if (!node.ArgumentNamesOpt.IsDefaultOrEmpty)
+                {
+                    var method = node.Method;
+                    return CSharpExprFactory(
+                        "Call",
+                        method.RequiresInstanceReceiver ? Visit(node.ReceiverOpt) : _bound.Null(ExpressionType),
+                        _bound.MethodInfo(method),
+                        ParameterBindings(node.Arguments, method, node.ArgumentNamesOpt));
+                }
+                else
+                {
+                    // Generate Expression.Call(Receiver, Method, [typeArguments,] arguments)
+                    var method = node.Method;
+                    return ExprFactory(
+                        "Call",
+                        method.RequiresInstanceReceiver ? Visit(node.ReceiverOpt) : _bound.Null(ExpressionType),
+                        _bound.MethodInfo(method),
+                        Expressions(node.Arguments));
+                }
             }
+        }
+
+        private BoundExpression ParameterBindings(ImmutableArray<BoundExpression> arguments, MethodSymbol method, ImmutableArray<string> argumentNamesOpt)
+        {
+            var parameters = method.GetParameters();
+
+            var builder = ArrayBuilder<BoundExpression>.GetInstance();
+
+            for (var i = 0; i < arguments.Length; i++)
+            {
+                var arg = arguments[i];
+                var par = parameters[i];
+                var name = argumentNamesOpt[i] ?? par.Name;
+                builder.Add(ParameterBinding(method, name, arg));
+            }
+
+            return _bound.Array(CSharpParameterAssignment, builder.ToImmutableAndFree());
+        }
+
+        private BoundExpression ParameterBinding(MethodSymbol method, string parameterName, BoundExpression argument)
+        {
+            var arg = Visit(argument);
+
+            return CSharpExprFactory("Bind", _bound.MethodInfo(method), _bound.StringLiteral(parameterName), arg);
         }
 
         private BoundExpression VisitConditionalOperator(BoundConditionalOperator node)

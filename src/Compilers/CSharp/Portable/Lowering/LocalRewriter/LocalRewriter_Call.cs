@@ -202,6 +202,15 @@ namespace Microsoft.CodeAnalysis.CSharp
             TypeSymbol type,
             ImmutableArray<LocalSymbol> temps = default(ImmutableArray<LocalSymbol>))
         {
+            var argumentNamesOpt = default(ImmutableArray<string>);
+            var argsToParamsOpt = default(ImmutableArray<int>);
+
+            if (_inExpressionLambda && node != null)
+            {
+                argumentNamesOpt = node.ArgumentNamesOpt;
+                argsToParamsOpt = node.ArgsToParamsOpt;
+            }
+
             BoundExpression rewrittenBoundCall;
 
             if (method.IsStatic &&
@@ -232,12 +241,12 @@ namespace Microsoft.CodeAnalysis.CSharp
                     rewrittenReceiver,
                     method,
                     rewrittenArguments,
-                    default(ImmutableArray<string>),
+                    argumentNamesOpt,
                     argumentRefKinds,
                     isDelegateCall: false,
                     expanded: false,
                     invokedAsExtensionMethod: invokedAsExtensionMethod,
-                    argsToParamsOpt: default(ImmutableArray<int>),
+                    argsToParamsOpt: argsToParamsOpt,
                     resultKind: resultKind,
                     binderOpt: null,
                     type: type);
@@ -248,12 +257,12 @@ namespace Microsoft.CodeAnalysis.CSharp
                     rewrittenReceiver,
                     method,
                     rewrittenArguments,
-                    default(ImmutableArray<string>),
+                    argumentNamesOpt,
                     argumentRefKinds,
                     node.IsDelegateCall,
                     false,
                     node.InvokedAsExtensionMethod,
-                    default(ImmutableArray<int>),
+                    argsToParamsOpt,
                     node.ResultKind,
                     node.BinderOpt,
                     node.Type);
@@ -468,54 +477,72 @@ namespace Microsoft.CodeAnalysis.CSharp
             // then run an optimizer to remove unnecessary temporaries.
 
             BoundExpression[] actualArguments = new BoundExpression[parameters.Length]; // The actual arguments that will be passed; one actual argument per formal parameter.
-            ArrayBuilder<BoundAssignmentOperator> storesToTemps = ArrayBuilder<BoundAssignmentOperator>.GetInstance(rewrittenArguments.Length);
-            ArrayBuilder<RefKind> refKinds = ArrayBuilder<RefKind>.GetInstance(parameters.Length, RefKind.None);
 
-            // Step one: Store everything that is non-trivial into a temporary; record the
-            // stores in storesToTemps and make the actual argument a reference to the temp.
-            // Do not yet attempt to deal with params arrays or optional arguments.
-            BuildStoresToTemps(
-                expanded,
-                argsToParamsOpt,
-                parameters,
-                argumentRefKindsOpt,
-                rewrittenArguments,
-                forceLambdaSpilling: false, // lambda conversions can be re-orderd in calls without side affects
-                actualArguments,
-                refKinds,
-                storesToTemps);
-
-
-            // all the formal arguments, except missing optionals, are now in place. 
-            // Optimize away unnecessary temporaries.
-            // Necessary temporaries have their store instructions merged into the appropriate 
-            // argument expression.
-            OptimizeTemporaries(actualArguments, storesToTemps, temporariesBuilder);
-
-            // Step two: If we have a params array, build the array and fill in the argument.
-            if (expanded)
+            if (!_inExpressionLambda)
             {
-                actualArguments[actualArguments.Length - 1] = BuildParamsArray(syntax, methodOrIndexer, argsToParamsOpt, rewrittenArguments, parameters, actualArguments[actualArguments.Length - 1]);
+                ArrayBuilder<BoundAssignmentOperator> storesToTemps = ArrayBuilder<BoundAssignmentOperator>.GetInstance(rewrittenArguments.Length);
+                ArrayBuilder<RefKind> refKinds = ArrayBuilder<RefKind>.GetInstance(parameters.Length, RefKind.None);
+
+                // Step one: Store everything that is non-trivial into a temporary; record the
+                // stores in storesToTemps and make the actual argument a reference to the temp.
+                // Do not yet attempt to deal with params arrays or optional arguments.
+                BuildStoresToTemps(
+                    expanded,
+                    argsToParamsOpt,
+                    parameters,
+                    argumentRefKindsOpt,
+                    rewrittenArguments,
+                    forceLambdaSpilling: false, // lambda conversions can be re-orderd in calls without side affects
+                    actualArguments,
+                    refKinds,
+                    storesToTemps);
+
+                // all the formal arguments, except missing optionals, are now in place. 
+                // Optimize away unnecessary temporaries.
+                // Necessary temporaries have their store instructions merged into the appropriate 
+                // argument expression.
+                OptimizeTemporaries(actualArguments, refKinds, storesToTemps, temporariesBuilder);
+
+                // Step two: If we have a params array, build the array and fill in the argument.
+                if (expanded)
+                {
+                    actualArguments[actualArguments.Length - 1] = BuildParamsArray(syntax, methodOrIndexer, argsToParamsOpt, rewrittenArguments, parameters, actualArguments[actualArguments.Length - 1]);
+                }
+
+                // Step three: Now fill in the optional arguments.
+                InsertMissingOptionalArguments(syntax, optionalParametersMethod.Parameters, actualArguments, refKinds, enableCallerInfo);
+
+                if (isComReceiver)
+                {
+                    RewriteArgumentsForComCall(parameters, actualArguments, refKinds, temporariesBuilder);
+                }
+
+                temps = temporariesBuilder.ToImmutableAndFree();
+                storesToTemps.Free();
+
+                // * The refkind map is now filled out to match the arguments.
+                // * The list of parameter names is now null because the arguments have been reordered.
+                // * The args-to-params map is now null because every argument exactly matches its parameter.
+                // * The call is no longer in its expanded form.
+
+                argumentRefKindsOpt = GetRefKindsOrNull(refKinds);
+                refKinds.Free();
             }
-
-            // Step three: Now fill in the optional arguments.
-            InsertMissingOptionalArguments(syntax, optionalParametersMethod.Parameters, actualArguments, refKinds, enableCallerInfo);
-
-            if (isComReceiver)
+            else
             {
-                RewriteArgumentsForComCall(parameters, actualArguments, refKinds, temporariesBuilder);
+                var copyTo = actualArguments.Length;
+
+                if (expanded)
+                {
+                    actualArguments[actualArguments.Length - 1] = BuildParamsArray(syntax, methodOrIndexer, argsToParamsOpt, rewrittenArguments, parameters, actualArguments[actualArguments.Length - 1]);
+                    copyTo--;
+                }
+
+                for (var i = 0; i < copyTo; i++)
+                {
+                    actualArguments[i] = rewrittenArguments[i];
+                }
             }
-
-            temps = temporariesBuilder.ToImmutableAndFree();
-            storesToTemps.Free();
-
-            // * The refkind map is now filled out to match the arguments.
-            // * The list of parameter names is now null because the arguments have been reordered.
-            // * The args-to-params map is now null because every argument exactly matches its parameter.
-            // * The call is no longer in its expanded form.
-
-            argumentRefKindsOpt = GetRefKindsOrNull(refKinds);
-            refKinds.Free();
 
             return actualArguments.AsImmutableOrNull();
         }
