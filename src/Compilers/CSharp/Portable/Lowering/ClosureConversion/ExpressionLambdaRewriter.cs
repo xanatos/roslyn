@@ -33,6 +33,19 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
+        private NamedTypeSymbol _CSharpExpressionType;
+        private NamedTypeSymbol CSharpExpressionType
+        {
+            get
+            {
+                if ((object)_CSharpExpressionType == null)
+                {
+                    _CSharpExpressionType = _bound.WellKnownType(WellKnownType.Microsoft_CSharp_Expressions_CSharpExpression);
+                }
+                return _CSharpExpressionType;
+            }
+        }
+
         private NamedTypeSymbol _ParameterExpressionType;
         private NamedTypeSymbol ParameterExpressionType
         {
@@ -1082,6 +1095,34 @@ namespace Microsoft.CodeAnalysis.CSharp
         private BoundExpression ExprFactory(string name, ImmutableArray<TypeSymbol> typeArgs, params BoundExpression[] arguments)
         {
             return _bound.StaticCall(_ignoreAccessibility ? BinderFlags.IgnoreAccessibility : BinderFlags.None, ExpressionType, name, typeArgs, arguments);
+        }
+
+        private BoundExpression ExprFactory(WellKnownMember method, ImmutableArray<TypeSymbol> typeArgs, params BoundExpression[] arguments)
+        {
+            var m0 = _bound.WellKnownMethod(method);
+            Debug.Assert((object)m0 != null);
+            Debug.Assert(m0.ParameterCount == arguments.Length);
+            var m1 = m0.Construct(typeArgs);
+            return _bound.Call(null, m1, arguments);
+        }
+
+        private BoundExpression CSharpExprFactory(string name, params BoundExpression[] arguments)
+        {
+            return _bound.StaticCall(CSharpExpressionType, name, arguments);
+        }
+
+        private BoundExpression CSharpExprFactory(string name, ImmutableArray<TypeSymbol> typeArgs, params BoundExpression[] arguments)
+        {
+            return _bound.StaticCall(_ignoreAccessibility ? BinderFlags.IgnoreAccessibility : BinderFlags.None, CSharpExpressionType, name, typeArgs, arguments);
+        }
+
+        private BoundExpression CSharpExprFactory(WellKnownMember method, ImmutableArray<TypeSymbol> typeArgs, params BoundExpression[] arguments)
+        {
+            var m0 = _bound.WellKnownMethod(method);
+            Debug.Assert((object)m0 != null);
+            Debug.Assert(m0.ParameterCount == arguments.Length);
+            var m1 = m0.Construct(typeArgs);
+            return _bound.Call(null, m1, arguments);
         }
 
         private BoundExpression Constant(BoundExpression node)
