@@ -617,8 +617,19 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             if (node.IsDelegateCall)
             {
-                // Generate Expression.Invoke(Receiver, arguments)
-                return ExprFactory(WellKnownMemberNames.DelegateInvokeName, Visit(node.ReceiverOpt), Expressions(node.Arguments));
+                if (!node.ArgumentNamesOpt.IsDefaultOrEmpty)
+                {
+                    var method = node.Method;
+                    return CSharpExprFactory(
+                        "Invoke",
+                        Visit(node.ReceiverOpt),
+                        ParameterBindings(node.Arguments, method, node.ArgumentNamesOpt));
+                }
+                else
+                {
+                    // Generate Expression.Invoke(Receiver, arguments)
+                    return ExprFactory(WellKnownMemberNames.DelegateInvokeName, Visit(node.ReceiverOpt), Expressions(node.Arguments));
+                }
             }
             else
             {
