@@ -663,6 +663,7 @@ namespace Microsoft.CodeAnalysis
 
                 int separator = name.IndexOf('`');
                 if (separator >= 0)
+
                 {
                     // Ignore type parameter qualifier for generic types.
                     name = name.Substring(0, separator);
