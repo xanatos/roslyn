@@ -480,11 +480,12 @@ namespace Microsoft.CodeAnalysis.CSharp
                     case SyntaxKind.ParenthesizedLambdaExpression:
                         {
                             var lambdaSyntax = (ParenthesizedLambdaExpressionSyntax)node.Syntax;
-                            if (lambdaSyntax.AsyncKeyword.Kind() == SyntaxKind.AsyncKeyword)
-                            {
-                                Error(ErrorCode.ERR_BadAsyncExpressionTree, node);
-                            }
-                            else if (lambdaSyntax.Body.Kind() == SyntaxKind.Block)
+                            //if (lambdaSyntax.AsyncKeyword.Kind() == SyntaxKind.AsyncKeyword)
+                            //{
+                            //    Error(ErrorCode.ERR_BadAsyncExpressionTree, node);
+                            //}
+                            //else 
+                            if (lambdaSyntax.Body.Kind() == SyntaxKind.Block)
                             {
                                 Error(ErrorCode.ERR_StatementLambdaToExpressionTree, node);
                             }
@@ -498,11 +499,12 @@ namespace Microsoft.CodeAnalysis.CSharp
                     case SyntaxKind.SimpleLambdaExpression:
                         {
                             var lambdaSyntax = (SimpleLambdaExpressionSyntax)node.Syntax;
-                            if (lambdaSyntax.AsyncKeyword.Kind() == SyntaxKind.AsyncKeyword)
-                            {
-                                Error(ErrorCode.ERR_BadAsyncExpressionTree, node);
-                            }
-                            else if (lambdaSyntax.Body.Kind() == SyntaxKind.Block)
+                            //if (lambdaSyntax.AsyncKeyword.Kind() == SyntaxKind.AsyncKeyword)
+                            //{
+                            //    Error(ErrorCode.ERR_BadAsyncExpressionTree, node);
+                            //}
+                            //else
+                            if (lambdaSyntax.Body.Kind() == SyntaxKind.Block)
                             {
                                 Error(ErrorCode.ERR_StatementLambdaToExpressionTree, node);
                             }
