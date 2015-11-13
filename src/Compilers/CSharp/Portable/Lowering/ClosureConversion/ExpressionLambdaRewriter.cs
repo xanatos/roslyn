@@ -347,6 +347,38 @@ namespace Microsoft.CodeAnalysis.CSharp
             return _bound.ArrayOrEmpty(ExpressionType, builder.ToImmutableAndFree());
         }
 
+        private BoundExpression RowMajorExpressions(ImmutableArray<BoundExpression> expressions)
+        {
+            var queue = new Queue<BoundExpression>(expressions.Length);
+
+            foreach (var arg in expressions)
+            {
+                queue.Enqueue(arg);
+            }
+
+            var builder = ArrayBuilder<BoundExpression>.GetInstance();
+
+            while (queue.Count > 0)
+            {
+                var arg = queue.Dequeue();
+
+                var init = arg as BoundArrayInitialization;
+                if (init != null)
+                {
+                    foreach (var elem in init.Initializers)
+                    {
+                        queue.Enqueue(elem);
+                    }
+                }
+                else
+                {
+                    builder.Add(Visit(arg));
+                }
+            }
+
+            return _bound.Array(ExpressionType, builder.ToImmutableAndFree());
+        }
+
         private BoundExpression VisitArrayCreation(BoundArrayCreation node)
         {
             var arrayType = (ArrayTypeSymbol)node.Type;
@@ -359,9 +391,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                 }
                 else
                 {
-                    // error should have been reported earlier
-                    // Bound.Diagnostics.Add(ErrorCode.ERR_ExpressionTreeContainsMultiDimensionalArrayInitializer, node.Syntax.Location);
-                    return new BoundBadExpression(node.Syntax, default(LookupResultKind), ImmutableArray<Symbol>.Empty, ImmutableArray.Create<BoundExpression>(node), ExpressionType);
+                    var bounds = _bound.Array(_int32Type, node.Bounds);
+                    var elements = RowMajorExpressions(node.InitializerOpt.Initializers);
+                    return CSharpExprFactory("NewMultidimensionalArrayInit", boundType, bounds, elements);
                 }
             }
             else
