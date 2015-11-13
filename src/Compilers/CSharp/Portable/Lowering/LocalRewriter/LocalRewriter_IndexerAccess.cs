@@ -143,6 +143,13 @@ namespace Microsoft.CodeAnalysis.CSharp
                     out temps,
                     enableCallerInfo: ThreeState.True);
 
+                if (_inExpressionLambda && argumentNamesOpt.Length != 0)
+                {
+                    return oldNodeOpt != null ?
+                        oldNodeOpt.Update(rewrittenReceiver, indexer, rewrittenArguments, argumentNamesOpt, argumentRefKindsOpt, expanded, argsToParamsOpt, type) :
+                        new BoundIndexerAccess(syntax, rewrittenReceiver, indexer, rewrittenArguments, argumentNamesOpt, argumentRefKindsOpt, expanded, argsToParamsOpt, type);
+                }
+
                 BoundExpression call = MakePropertyGetAccess(syntax, rewrittenReceiver, indexer, rewrittenArguments, getMethod);
 
                 if (temps.IsDefaultOrEmpty)
