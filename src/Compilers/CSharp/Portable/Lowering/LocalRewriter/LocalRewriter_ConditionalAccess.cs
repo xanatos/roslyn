@@ -39,7 +39,11 @@ namespace Microsoft.CodeAnalysis.CSharp
         // by utilizing stack dup/pop instructions 
         internal BoundExpression? RewriteConditionalAccess(BoundConditionalAccess node, bool used)
         {
-            Debug.Assert(!_inExpressionLambda);
+            if (_inExpressionLambda)
+            {
+                return node;
+            }
+
             Debug.Assert(node.AccessExpression.Type is { });
 
             var loweredReceiver = this.VisitExpression(node.Receiver);
