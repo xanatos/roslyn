@@ -43,8 +43,9 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             if (_inExpressionLambda)
             {
-                // TODO: lower access expression; decide whether to optimize default value case or not
-                return node.Update(loweredReceiver, node.AccessExpression, node.Type);
+                // TODO: decide whether to optimize default value case or not
+                var loweredAccess = this.VisitExpression(node.AccessExpression);
+                return node.Update(loweredReceiver, loweredAccess, node.Type);
             }
 
             Debug.Assert(node.AccessExpression.Type is { });
@@ -212,6 +213,11 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         public override BoundNode VisitConditionalReceiver(BoundConditionalReceiver node)
         {
+            if (_inExpressionLambda)
+            {
+                return node;
+            }
+
             var newtarget = _currentConditionalAccessTarget;
             Debug.Assert(newtarget is { Type: { } });
 
