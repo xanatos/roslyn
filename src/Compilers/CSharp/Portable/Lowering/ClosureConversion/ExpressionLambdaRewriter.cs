@@ -263,6 +263,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return VisitPointerElementAccess((BoundPointerElementAccess)node);
                 case BoundKind.PropertyAccess:
                     return VisitPropertyAccess((BoundPropertyAccess)node);
+                case BoundKind.QuotedDynamicMemberAccess:
+                    return VisitDynamicMemberAccess((BoundQuotedDynamicMemberAccess)node);
                 case BoundKind.SizeOfOperator:
                     return VisitSizeOfOperator((BoundSizeOfOperator)node);
                 case BoundKind.UnaryOperator:
@@ -890,6 +892,11 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             // there should be no other cases.  Have we missed one?
             throw ExceptionUtilities.UnexpectedValue(node.Argument);
+        }
+
+        private BoundExpression VisitDynamicMemberAccess(BoundQuotedDynamicMemberAccess node)
+        {
+            throw new NotImplementedException();
         }
 
         private BoundExpression VisitFieldAccess(BoundFieldAccess node)
