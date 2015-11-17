@@ -755,16 +755,16 @@ namespace Microsoft.CodeAnalysis.CSharp
             return base.VisitDynamicInvocation(node);
         }
 
-        public override BoundNode VisitDynamicIndexerAccess(BoundDynamicIndexerAccess node)
-        {
-            if (_inExpressionLambda)
-            {
-                Error(ErrorCode.ERR_ExpressionTreeContainsDynamicOperation, node);
-            }
+        //public override BoundNode VisitDynamicIndexerAccess(BoundDynamicIndexerAccess node)
+        //{
+        //    if (_inExpressionLambda)
+        //    {
+        //        Error(ErrorCode.ERR_ExpressionTreeContainsDynamicOperation, node);
+        //    }
 
-            CheckReceiverIfField(node.Receiver);
-            return base.VisitDynamicIndexerAccess(node);
-        }
+        //    CheckReceiverIfField(node.ReceiverOpt);
+        //    return base.VisitDynamicIndexerAccess(node);
+        //}
 
         //public override BoundNode VisitDynamicMemberAccess(BoundDynamicMemberAccess node)
         //{
