@@ -689,7 +689,8 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         private BoundExpression VisitCall(BoundCall node)
         {
-            return VisitCall(Visit(node.ReceiverOpt), node);
+            var receiver = node.Method.IsStatic ? null : Visit(node.ReceiverOpt);
+            return VisitCall(receiver, node);
         }
 
         private BoundExpression VisitCall(BoundExpression receiverOpt, BoundCall node, bool isConditional = false)
@@ -1010,7 +1011,8 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         private BoundExpression VisitFieldAccess(BoundFieldAccess node)
         {
-            return VisitFieldAccess(Visit(node.ReceiverOpt), node);
+            var receiver = node.FieldSymbol.IsStatic ? null : Visit(node.ReceiverOpt);
+            return VisitFieldAccess(receiver, node);
         }
 
         private BoundExpression VisitFieldAccess(BoundExpression receiverOpt, BoundFieldAccess node, bool isConditional = false)
@@ -1023,7 +1025,11 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         private BoundExpression VisitIndexerAccess(BoundIndexerAccess node)
         {
-            return VisitIndexerAccess(Visit(node.ReceiverOpt), node);
+            var indexer = node.Indexer;
+            var method = indexer.GetOwnOrInheritedGetMethod() ?? indexer.GetOwnOrInheritedSetMethod();
+            var receiver = method.IsStatic ? null : Visit(node.ReceiverOpt);
+
+            return VisitIndexerAccess(receiver, node);
         }
 
         private BoundExpression VisitIndexerAccess(BoundExpression receiverOpt, BoundIndexerAccess node, bool isConditional = false)
@@ -1332,7 +1338,8 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         private BoundExpression VisitPropertyAccess(BoundPropertyAccess node)
         {
-            return VisitPropertyAccess(Visit(node.ReceiverOpt), node);
+            var receiver = node.PropertySymbol.IsStatic ? null : Visit(node.ReceiverOpt);
+            return VisitPropertyAccess(receiver, node);
         }
 
         private BoundExpression VisitPropertyAccess(BoundExpression receiverOpt, BoundPropertyAccess node, bool isConditional = false)
