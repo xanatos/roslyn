@@ -564,27 +564,27 @@ namespace Microsoft.CodeAnalysis.CSharp
             return base.VisitUserDefinedConditionalLogicalOperator(node);
         }
 
-        private void CheckDynamic(BoundUnaryOperator node)
-        {
-            if (_inExpressionLambda && node.OperatorKind.IsDynamic())
-            {
-                Error(ErrorCode.ERR_ExpressionTreeContainsDynamicOperation, node);
-            }
-        }
+        //private void CheckDynamic(BoundUnaryOperator node)
+        //{
+        //    if (_inExpressionLambda && node.OperatorKind.IsDynamic())
+        //    {
+        //        Error(ErrorCode.ERR_ExpressionTreeContainsDynamicOperation, node);
+        //    }
+        //}
 
-        private void CheckDynamic(BoundBinaryOperator node)
-        {
-            if (_inExpressionLambda && node.OperatorKind.IsDynamic())
-            {
-                Error(ErrorCode.ERR_ExpressionTreeContainsDynamicOperation, node);
-            }
-        }
+        //private void CheckDynamic(BoundBinaryOperator node)
+        //{
+        //    if (_inExpressionLambda && node.OperatorKind.IsDynamic())
+        //    {
+        //        Error(ErrorCode.ERR_ExpressionTreeContainsDynamicOperation, node);
+        //    }
+        //}
 
         public override BoundNode VisitUnaryOperator(BoundUnaryOperator node)
         {
             CheckUnsafeType(node);
             CheckLiftedUnaryOp(node);
-            CheckDynamic(node);
+            //CheckDynamic(node);
             return base.VisitUnaryOperator(node);
         }
 
@@ -790,7 +790,11 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             if (_inExpressionLambda)
             {
-                Error(ErrorCode.ERR_ExpressionTreeContainsDynamicOperation, node);
+                // TODO: Can we support initializers in combination with dynamic?
+                if (node.InitializerExpressionOpt != null)
+                {
+                    Error(ErrorCode.ERR_ExpressionTreeContainsDynamicOperation, node);
+                }
             }
 
             return base.VisitDynamicObjectCreationExpression(node);

@@ -18,7 +18,17 @@ namespace Microsoft.CodeAnalysis.CSharp
         public override BoundNode VisitDynamicObjectCreationExpression(BoundDynamicObjectCreationExpression node)
         {
             var loweredArguments = VisitList(node.Arguments);
-            var constructorInvocation = _dynamicFactory.MakeDynamicConstructorInvocation(node.Syntax, node.Type, loweredArguments, node.ArgumentNamesOpt, node.ArgumentRefKindsOpt).ToExpression();
+
+            BoundExpression constructorInvocation;
+
+            if (_inExpressionLambda)
+            {
+                constructorInvocation = _dynamicFactory.MakeDynamicConstructorInvocationExpression(node.Syntax, node.Type, loweredArguments, node.ArgumentNamesOpt, node.ArgumentRefKindsOpt);
+            }
+            else
+            {
+                constructorInvocation = _dynamicFactory.MakeDynamicConstructorInvocation(node.Syntax, node.Type, loweredArguments, node.ArgumentNamesOpt, node.ArgumentRefKindsOpt).ToExpression();
+            }
 
             if (node.InitializerExpressionOpt == null || node.InitializerExpressionOpt.HasErrors)
             {

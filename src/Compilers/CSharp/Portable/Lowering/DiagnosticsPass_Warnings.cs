@@ -257,7 +257,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             CheckNullableNullBinOp(node);
             CheckLiftedBinOp(node);
             CheckRelationals(node);
-            CheckDynamic(node);
+            //CheckDynamic(node);
         }
 
         private void CheckCompoundAssignmentOperator(BoundCompoundAssignmentOperator node)
