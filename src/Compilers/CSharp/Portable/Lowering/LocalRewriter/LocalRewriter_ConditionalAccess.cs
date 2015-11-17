@@ -39,16 +39,18 @@ namespace Microsoft.CodeAnalysis.CSharp
         // by utilizing stack dup/pop instructions 
         internal BoundExpression? RewriteConditionalAccess(BoundConditionalAccess node, bool used)
         {
+            var loweredReceiver = this.VisitExpression(node.Receiver);
+
             if (_inExpressionLambda)
             {
-                return node;
+                // TODO: lower access expression; decide whether to optimize default value case or not
+                return node.Update(loweredReceiver, node.AccessExpression, node.Type);
             }
 
             Debug.Assert(node.AccessExpression.Type is { });
 
-            var loweredReceiver = this.VisitExpression(node.Receiver);
-            Debug.Assert(loweredReceiver.Type is { });
             var receiverType = loweredReceiver.Type;
+            Debug.Assert(receiverType is { });
 
             // Check trivial case
             if (loweredReceiver.IsDefaultValue() && receiverType.IsReferenceType)
