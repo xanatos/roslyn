@@ -297,8 +297,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 receiverRefKind = GetReceiverRefKind(loweredReceiver);
             }
 
-            // TODO: does runtime library have enough information without passing receiverRefKind?
-            // TODO: check runtime library behavior when performing dynamic operation on struct
+            // DESIGN: does runtime library have enough information without passing receiverRefKind?
 
             var args = MakeDynamicArgumentExpressions(loweredReceiver.Syntax, loweredArguments, argumentNames, refKinds);
 
