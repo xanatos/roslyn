@@ -647,13 +647,13 @@ namespace Microsoft.CodeAnalysis.CSharp
                     }
                     break;
 
-                case ConversionKind.ImplicitDynamic:
-                case ConversionKind.ExplicitDynamic:
-                    if (_inExpressionLambda)
-                    {
-                        Error(ErrorCode.ERR_ExpressionTreeContainsDynamicOperation, node);
-                    }
-                    break;
+                //case ConversionKind.ImplicitDynamic:
+                //case ConversionKind.ExplicitDynamic:
+                //    if (_inExpressionLambda)
+                //    {
+                //        Error(ErrorCode.ERR_ExpressionTreeContainsDynamicOperation, node);
+                //    }
+                //    break;
 
                 case ConversionKind.ExplicitTuple:
                 case ConversionKind.ExplicitTupleLiteral:
