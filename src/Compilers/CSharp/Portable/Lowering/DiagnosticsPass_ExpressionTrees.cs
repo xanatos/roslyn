@@ -739,21 +739,21 @@ namespace Microsoft.CodeAnalysis.CSharp
             return base.VisitNullCoalescingAssignmentOperator(node);
         }
 
-        public override BoundNode VisitDynamicInvocation(BoundDynamicInvocation node)
-        {
-            if (_inExpressionLambda)
-            {
-                Error(ErrorCode.ERR_ExpressionTreeContainsDynamicOperation, node);
 
-                // avoid reporting errors for the method group:
-                if (node.Expression.Kind == BoundKind.MethodGroup)
-                {
-                    return base.VisitMethodGroup((BoundMethodGroup)node.Expression);
-                }
-            }
+        //public override BoundNode VisitDynamicInvocation(BoundDynamicInvocation node)
+        //{
+        //    if (_inExpressionLambda)
+        //    {
+        //        Error(ErrorCode.ERR_ExpressionTreeContainsDynamicOperation, node);
+        //        // avoid reporting errors for the method group:
+        //        if (node.Expression.Kind == BoundKind.MethodGroup)
+        //        {
+        //            return base.VisitMethodGroup((BoundMethodGroup)node.Expression);
+        //        }
+        //    }
 
-            return base.VisitDynamicInvocation(node);
-        }
+        //    return base.VisitDynamicInvocation(node);
+        //}
 
         //public override BoundNode VisitDynamicIndexerAccess(BoundDynamicIndexerAccess node)
         //{
