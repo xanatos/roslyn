@@ -46,16 +46,42 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
-        private NamedTypeSymbol _CSharpParameterAssignment;
-        private NamedTypeSymbol CSharpParameterAssignment
+        private NamedTypeSymbol _CSharpParameterAssignmentType;
+        private NamedTypeSymbol CSharpParameterAssignmentType
         {
             get
             {
-                if ((object)_CSharpParameterAssignment == null)
+                if ((object)_CSharpParameterAssignmentType == null)
                 {
-                    _CSharpParameterAssignment = _bound.WellKnownType(WellKnownType.Microsoft_CSharp_Expressions_ParameterAssignment);
+                    _CSharpParameterAssignmentType = _bound.WellKnownType(WellKnownType.Microsoft_CSharp_Expressions_ParameterAssignment);
                 }
-                return _CSharpParameterAssignment;
+                return _CSharpParameterAssignmentType;
+            }
+        }
+
+        private NamedTypeSymbol _DynamicCSharpExpressionType;
+        private NamedTypeSymbol DynamicCSharpExpressionType
+        {
+            get
+            {
+                if ((object)_DynamicCSharpExpressionType == null)
+                {
+                    _DynamicCSharpExpressionType = _bound.WellKnownType(WellKnownType.Microsoft_CSharp_Expressions_DynamicCSharpExpression);
+                }
+                return _DynamicCSharpExpressionType;
+            }
+        }
+
+        private NamedTypeSymbol _DynamicCSharpArgumentType;
+        private NamedTypeSymbol DynamicCSharpArgumentType
+        {
+            get
+            {
+                if ((object)_DynamicCSharpArgumentType == null)
+                {
+                    _DynamicCSharpArgumentType = _bound.WellKnownType(WellKnownType.Microsoft_CSharp_Expressions_DynamicCSharpArgument);
+                }
+                return _DynamicCSharpArgumentType;
             }
         }
 
@@ -693,7 +719,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 builder.Add(ParameterBinding(method, name, arg));
             }
 
-            return _bound.Array(CSharpParameterAssignment, builder.ToImmutableAndFree());
+            return _bound.Array(CSharpParameterAssignmentType, builder.ToImmutableAndFree());
         }
 
         private BoundExpression ParameterBinding(MethodSymbol method, string parameterName, BoundExpression argument)
@@ -896,7 +922,13 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         private BoundExpression VisitDynamicMemberAccess(BoundQuotedDynamicMemberAccess node)
         {
-            throw new NotImplementedException();
+            var receiver = Visit(node.Receiver);
+            var name = node.Name;
+            var args = _bound.Array(DynamicCSharpArgumentType, ImmutableArray<BoundExpression>.Empty); // REVIEW: remove altogether in runtime library?
+            var flags = node.Flags;
+            var context = node.Context;
+
+            return DynamicCSharpExprFactory("DynamicGetMember", receiver, name, args, flags, context);
         }
 
         private BoundExpression VisitFieldAccess(BoundFieldAccess node)
@@ -1344,6 +1376,25 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
 
         private BoundExpression CSharpExprFactory(WellKnownMember method, ImmutableArray<TypeSymbol> typeArgs, params BoundExpression[] arguments)
+        {
+            var m0 = _bound.WellKnownMethod(method);
+            Debug.Assert((object)m0 != null);
+            Debug.Assert(m0.ParameterCount == arguments.Length);
+            var m1 = m0.Construct(typeArgs);
+            return _bound.Call(null, m1, arguments);
+        }
+
+        private BoundExpression DynamicCSharpExprFactory(string name, params BoundExpression[] arguments)
+        {
+            return _bound.StaticCall(DynamicCSharpExpressionType, name, arguments);
+        }
+
+        private BoundExpression DynamicCSharpExprFactory(string name, ImmutableArray<TypeSymbol> typeArgs, params BoundExpression[] arguments)
+        {
+            return _bound.StaticCall(_ignoreAccessibility ? BinderFlags.IgnoreAccessibility : BinderFlags.None, DynamicCSharpExpressionType, name, typeArgs, arguments);
+        }
+
+        private BoundExpression DynamicCSharpExprFactory(WellKnownMember method, ImmutableArray<TypeSymbol> typeArgs, params BoundExpression[] arguments)
         {
             var m0 = _bound.WellKnownMethod(method);
             Debug.Assert((object)m0 != null);

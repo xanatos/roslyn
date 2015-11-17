@@ -766,15 +766,15 @@ namespace Microsoft.CodeAnalysis.CSharp
             return base.VisitDynamicIndexerAccess(node);
         }
 
-        public override BoundNode VisitDynamicMemberAccess(BoundDynamicMemberAccess node)
-        {
-            if (_inExpressionLambda)
-            {
-                Error(ErrorCode.ERR_ExpressionTreeContainsDynamicOperation, node);
-            }
+        //public override BoundNode VisitDynamicMemberAccess(BoundDynamicMemberAccess node)
+        //{
+        //    if (_inExpressionLambda)
+        //    {
+        //        Error(ErrorCode.ERR_ExpressionTreeContainsDynamicOperation, node);
+        //    }
 
-            return base.VisitDynamicMemberAccess(node);
-        }
+        //    return base.VisitDynamicMemberAccess(node);
+        //}
 
         public override BoundNode VisitDynamicCollectionElementInitializer(BoundDynamicCollectionElementInitializer node)
         {

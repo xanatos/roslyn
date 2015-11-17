@@ -313,6 +313,8 @@ namespace Microsoft.CodeAnalysis
 
         Microsoft_CSharp_Expressions_CSharpExpression,
         Microsoft_CSharp_Expressions_ParameterAssignment,
+        Microsoft_CSharp_Expressions_DynamicCSharpExpression,
+        Microsoft_CSharp_Expressions_DynamicCSharpArgument,
 
         NextAvailable,
 
@@ -619,6 +621,9 @@ namespace Microsoft.CodeAnalysis
 
             "Microsoft.CSharp.Expressions.CSharpExpression",
             "Microsoft.CSharp.Expressions.ParameterAssignment",
+
+            "Microsoft.CSharp.Expressions.DynamicCSharpExpression",
+            "Microsoft.CSharp.Expressions.DynamicCSharpArgument",
         };
 
         private readonly static Dictionary<string, WellKnownType> s_nameToTypeIdMap = new Dictionary<string, WellKnownType>((int)Count);

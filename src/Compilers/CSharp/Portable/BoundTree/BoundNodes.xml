@@ -1929,6 +1929,7 @@
     <Field Name="Body" Type="BoundBlock"/>
     <Field Name="Diagnostics" Type="ImmutableArray&lt;Microsoft.CodeAnalysis.Diagnostic&gt;" />
     <Field Name="Binder" Type="Binder" Null="disallow" />
+    <Field Name="IsAsync" Type="bool" />
   </Node>
 
   <Node Name="UnboundLambda" Base="BoundExpression">
@@ -1980,6 +1981,13 @@
     <Field Name="Value" Type="BoundExpression" Null="disallow"/>
     <Field Name="Alignment" Type="BoundExpression?"/>
     <Field Name="Format" Type="BoundLiteral?"/>
+  </Node>
+
+  <Node Name="BoundQuotedDynamicMemberAccess" Base="BoundExpression">
+    <Field Name="Receiver" Type="BoundExpression" Null="disallow"/>
+    <Field Name="Name" Type="BoundExpression" Null="disallow"/>
+    <Field Name="Flags" Type="BoundExpression" Null="disallow"/>
+    <Field Name="Context" Type="BoundExpression" Null="disallow"/>
   </Node>
   
   <Node Name="BoundIsPatternExpression" Base="BoundExpression">
