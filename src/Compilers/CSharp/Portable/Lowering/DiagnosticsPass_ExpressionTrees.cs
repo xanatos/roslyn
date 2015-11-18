@@ -853,19 +853,5 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             return base.VisitThrowExpression(node);
         }
-
-        public override BoundNode VisitAwaitExpression(BoundAwaitExpression node)
-        {
-            if (_inExpressionLambda)
-            {
-                // TODO: Can we support the dynamic variant?
-                if (node.IsDynamic)
-                {
-                    Error(ErrorCode.ERR_ExpressionTreeContainsDynamicOperation, node); // TODO: refine error or lift restriction
-                }
-            }
-
-            return base.VisitAwaitExpression(node);
-        }
     }
 }
