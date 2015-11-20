@@ -488,12 +488,11 @@ namespace Microsoft.CodeAnalysis.CSharp
                             //{
                             //    Error(ErrorCode.ERR_BadAsyncExpressionTree, node);
                             //}
-                            //else 
-                            if (lambdaSyntax.Body.Kind() == SyntaxKind.Block)
-                            {
-                                Error(ErrorCode.ERR_StatementLambdaToExpressionTree, node);
-                            }
-                            else if (lambdaSyntax.Body.Kind() == SyntaxKind.RefExpression)
+                            //else if (lambdaSyntax.Body.Kind() == SyntaxKind.Block)
+                            //{
+                            //    Error(ErrorCode.ERR_StatementLambdaToExpressionTree, node);
+                            //}
+                            if (lambdaSyntax.Body.Kind() == SyntaxKind.RefExpression)
                             {
                                 Error(ErrorCode.ERR_BadRefReturnExpressionTree, node);
                             }
@@ -507,12 +506,11 @@ namespace Microsoft.CodeAnalysis.CSharp
                             //{
                             //    Error(ErrorCode.ERR_BadAsyncExpressionTree, node);
                             //}
-                            //else
-                            if (lambdaSyntax.Body.Kind() == SyntaxKind.Block)
-                            {
-                                Error(ErrorCode.ERR_StatementLambdaToExpressionTree, node);
-                            }
-                            else if (lambdaSyntax.Body.Kind() == SyntaxKind.RefExpression)
+                            //else if (lambdaSyntax.Body.Kind() == SyntaxKind.Block)
+                            //{
+                            //    Error(ErrorCode.ERR_StatementLambdaToExpressionTree, node);
+                            //}
+                            if (lambdaSyntax.Body.Kind() == SyntaxKind.RefExpression)
                             {
                                 Error(ErrorCode.ERR_BadRefReturnExpressionTree, node);
                             }
