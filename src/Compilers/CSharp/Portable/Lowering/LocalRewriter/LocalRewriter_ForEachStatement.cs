@@ -35,6 +35,11 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return node;
             }
 
+            if (_inExpressionLambda)
+            {
+                return node;
+            }
+
             BoundExpression collectionExpression = GetUnconvertedCollectionExpression(node);
             TypeSymbol? nodeExpressionType = collectionExpression.Type;
             Debug.Assert(nodeExpressionType is { });
