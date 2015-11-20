@@ -431,6 +431,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return VisitAssignmentOperator((BoundAssignmentOperator)node);
                 case BoundKind.CompoundAssignmentOperator:
                     return VisitCompoundAssignmentOperator((BoundCompoundAssignmentOperator)node);
+                case BoundKind.IncrementOperator:
+                    return VisitIncrementOperator((BoundIncrementOperator)node);
 
                 default:
                     throw ExceptionUtilities.UnexpectedValue(node.Kind);
