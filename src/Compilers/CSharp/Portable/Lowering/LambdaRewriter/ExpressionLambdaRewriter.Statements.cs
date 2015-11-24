@@ -50,6 +50,19 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
+        private NamedTypeSymbol _CSharpCSharpSwitchCaseType;
+        private NamedTypeSymbol CSharpSwitchCaseType
+        {
+            get
+            {
+                if ((object)_CSharpCSharpSwitchCaseType == null)
+                {
+                    _CSharpCSharpSwitchCaseType = _bound.WellKnownType(WellKnownType.Microsoft_CSharp_Expressions_CSharpSwitchCase);
+                }
+                return _CSharpCSharpSwitchCaseType;
+            }
+        }
+
         private BoundExpression Visit(BoundStatement node)
         {
             if (node == null)
@@ -92,10 +105,8 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 case BoundKind.IfStatement:
                     return VisitIf((BoundIfStatement)node);
-                /*
                 case BoundKind.SwitchStatement:
                     return VisitSwitch((BoundSwitchStatement)node);
-                */
                 case BoundKind.DoStatement:
                     return VisitDo((BoundDoStatement)node);
                 case BoundKind.ForStatement:
@@ -452,6 +463,76 @@ namespace Microsoft.CodeAnalysis.CSharp
             return ifElse != null ? CSharpStmtFactory("IfThenElse", condition, ifThen, ifElse) : CSharpStmtFactory("IfThen", condition, ifThen);
         }
 
+        private BoundExpression VisitSwitch(BoundSwitchStatement node)
+        {
+            // TODO: InnerLocals
+
+            var expression = Visit(node.BoundExpression);
+
+            CurrentLambdaInfo.PushBreak(node.BreakLabel);
+
+            var defaultBody = _bound.Null(_bound.WellKnownType(WellKnownType.System_Linq_Expressions_Expression));
+
+            var caseList = ArrayBuilder<BoundExpression>.GetInstance();
+
+            foreach (var section in node.SwitchSections)
+            {
+                if (section.BoundSwitchLabels.Length == 0)
+                {
+                    defaultBody = VisitStatements(section.Statements, asBlock: true);
+                }
+                else
+                {
+                    var switchLabels = section.BoundSwitchLabels.SelectAsArray(l =>
+                    {
+                        if (l.ExpressionOpt == null)
+                        {
+                            // default case
+                            return _bound.Property(CSharpExpressionType, "SwitchCaseDefaultValue");
+                        }
+                        else
+                        {
+                            return _bound.Convert(_objectType, l.ExpressionOpt);
+                        }
+                    });
+
+                    var testValues = _bound.Array(_objectType, switchLabels);
+
+                    var body = VisitStatements(section.Statements, asBlock: false);
+
+                    var @case = CSharpStmtFactory("SwitchCase", testValues, body);
+                    caseList.Add(@case);
+                }
+            }
+
+            var cases = _bound.Array(CSharpSwitchCaseType, caseList.ToImmutableAndFree());
+
+            var breakInfo = CurrentLambdaInfo.PopBreak();
+
+            return CSharpStmtFactory("Switch", expression, breakInfo.BreakLabel, defaultBody, cases);
+        }
+
+        private BoundExpression VisitStatements(ImmutableArray<BoundStatement> statements, bool asBlock)
+        {
+            // DESIGN: We treat the default body as special, and turn it into a block. Maybe we should model it as a CSharpSwitchCase as well?
+
+            var builder = ArrayBuilder<BoundExpression>.GetInstance();
+
+            foreach (var stmt in statements)
+            {
+                builder.Add(Visit(stmt));
+            }
+
+            var expression = _bound.Array(ExpressionType, builder.ToImmutableAndFree());
+
+            if (asBlock)
+            {
+                expression = CSharpStmtFactory("Block", expression);
+            }
+
+            return expression;
+        }
+
         private BoundExpression VisitDo(BoundDoStatement node)
         {
             var condition = Visit(node.Condition);
@@ -551,7 +632,6 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         private BoundExpression VisitBreak(BoundBreakStatement node)
         {
-            // TODO: break could refer to switch
             return CSharpStmtFactory("Break", CurrentLambdaInfo.ClosestBreak);
         }
 
@@ -714,7 +794,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
             else
             {
-                return CSharpStmtFactory("Throw");
+                return CSharpStmtFactory("Rethrow");
             }
         }
 
@@ -730,6 +810,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             private readonly ArrayBuilder<LocalSymbol> _locals;
             private readonly ArrayBuilder<BoundExpression> _initializers;
             private readonly Stack<LoopInfo> _loops = new Stack<LoopInfo>();
+            private readonly Stack<BreakInfo> _breaks = new Stack<BreakInfo>();
 
             private BoundLocal _returnLabelTarget;
 
@@ -784,9 +865,9 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             internal void PushLoop(LabelSymbol breakLabel, LabelSymbol continueLabel)
             {
-                var breakLabelLocalSymbol = CreateLabelTargetLocalSymbol();
-                var breakLabelLocal = CreateLabelTargetLocal(breakLabelLocalSymbol);
-                AddLabelInitializer(breakLabelLocal, _parent.CSharpStmtFactory("Label"));
+                // TODO: Use the parameters so we can assert?
+
+                var breakLabelLocal = PushBreak(breakLabel);
 
                 var continueLabelLocalSymbol = CreateLabelTargetLocalSymbol();
                 var continueLabelLocal = CreateLabelTargetLocal(continueLabelLocalSymbol);
@@ -803,11 +884,35 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             internal LoopInfo PopLoop()
             {
+                PopBreak();
+
                 return _loops.Pop();
             }
 
-            // TODO: break could refer to switch; need to reconsider when adding switch support
-            internal BoundExpression ClosestBreak => _loops.Peek().BreakLabel;
+            internal BoundLocal PushBreak(LabelSymbol breakLabel)
+            {
+                // TODO: Use the parameters so we can assert?
+
+                var breakLabelLocalSymbol = CreateLabelTargetLocalSymbol();
+                var breakLabelLocal = CreateLabelTargetLocal(breakLabelLocalSymbol);
+                AddLabelInitializer(breakLabelLocal, _parent.CSharpStmtFactory("Label"));
+
+                var breakInfo = new BreakInfo
+                {
+                    BreakLabel = breakLabelLocal,
+                };
+
+                _breaks.Push(breakInfo);
+
+                return breakLabelLocal;
+            }
+
+            internal BreakInfo PopBreak()
+            {
+                return _breaks.Pop();
+            }
+
+            internal BoundExpression ClosestBreak => _breaks.Peek().BreakLabel;
             internal BoundExpression ClosestLoopContinue => _loops.Peek().ContinueLabel;
 
             private LocalSymbol CreateLabelTargetLocalSymbol()
@@ -832,6 +937,11 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             public BoundExpression BreakLabel { get; set; }
             public BoundExpression ContinueLabel { get; set; }
+        }
+
+        class BreakInfo
+        {
+            public BoundExpression BreakLabel { get; set; }
         }
     }
 }
