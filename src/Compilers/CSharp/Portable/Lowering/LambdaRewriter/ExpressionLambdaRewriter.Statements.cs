@@ -465,13 +465,11 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         private BoundExpression VisitSwitch(BoundSwitchStatement node)
         {
-            // TODO: InnerLocals
-
             var expression = Visit(node.BoundExpression);
 
             CurrentLambdaInfo.PushBreak(node.BreakLabel);
 
-            var defaultBody = _bound.Null(_bound.WellKnownType(WellKnownType.System_Linq_Expressions_Expression));
+            var locals = PushLocals(node.InnerLocals);
 
             var caseList = ArrayBuilder<BoundExpression>.GetInstance();
 
@@ -504,7 +502,11 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             var breakInfo = CurrentLambdaInfo.PopBreak();
 
-            return CSharpStmtFactory("Switch", expression, breakInfo.BreakLabel, defaultBody, cases);
+            PopLocals(node.InnerLocals);
+
+            var variables = _bound.Array(ParameterExpressionType, locals.ToImmutableAndFree());
+
+            return CSharpStmtFactory("Switch", expression, breakInfo.BreakLabel, variables, cases);
         }
 
         private BoundExpression VisitStatements(ImmutableArray<BoundStatement> statements)
