@@ -477,32 +477,27 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             foreach (var section in node.SwitchSections)
             {
-                if (section.BoundSwitchLabels.Length == 0)
+                var switchLabels = section.BoundSwitchLabels.SelectAsArray(l =>
                 {
-                    defaultBody = VisitStatements(section.Statements, asBlock: true);
-                }
-                else
-                {
-                    var switchLabels = section.BoundSwitchLabels.SelectAsArray(l =>
+                    // REVIEW: Label, Pattern, WhenClause
+
+                    if (l.ExpressionOpt == null)
                     {
-                        if (l.ExpressionOpt == null)
-                        {
-                            // default case
-                            return _bound.Property(CSharpExpressionType, "SwitchCaseDefaultValue");
-                        }
-                        else
-                        {
-                            return _bound.Convert(_objectType, l.ExpressionOpt);
-                        }
-                    });
+                        // default case
+                        return _bound.Property(CSharpExpressionType, "SwitchCaseDefaultValue");
+                    }
+                    else
+                    {
+                        return _bound.Convert(_objectType, l.ExpressionOpt);
+                    }
+                });
 
-                    var testValues = _bound.Array(_objectType, switchLabels);
+                var testValues = _bound.Array(_objectType, switchLabels);
 
-                    var body = VisitStatements(section.Statements, asBlock: false);
+                var body = VisitStatements(section.Statements);
 
-                    var @case = CSharpStmtFactory("SwitchCase", testValues, body);
-                    caseList.Add(@case);
-                }
+                var @case = CSharpStmtFactory("SwitchCase", testValues, body);
+                caseList.Add(@case);
             }
 
             var cases = _bound.Array(CSharpSwitchCaseType, caseList.ToImmutableAndFree());
@@ -512,10 +507,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             return CSharpStmtFactory("Switch", expression, breakInfo.BreakLabel, defaultBody, cases);
         }
 
-        private BoundExpression VisitStatements(ImmutableArray<BoundStatement> statements, bool asBlock)
+        private BoundExpression VisitStatements(ImmutableArray<BoundStatement> statements)
         {
-            // DESIGN: We treat the default body as special, and turn it into a block. Maybe we should model it as a CSharpSwitchCase as well?
-
             var builder = ArrayBuilder<BoundExpression>.GetInstance();
 
             foreach (var stmt in statements)
@@ -524,11 +517,6 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
 
             var expression = _bound.Array(ExpressionType, builder.ToImmutableAndFree());
-
-            if (asBlock)
-            {
-                expression = CSharpStmtFactory("Block", expression);
-            }
 
             return expression;
         }
