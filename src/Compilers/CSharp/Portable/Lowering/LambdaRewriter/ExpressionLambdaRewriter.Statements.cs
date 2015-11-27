@@ -298,6 +298,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             // node.OperandConversion
             // node.ResultConversion
 
+            // TODO: support checked variants
+            //
+            // var isChecked = node.OperatorKind.IsChecked();
+
             var op = Visit(node.Operand);
 
             var unaryOperatorName = default(string);
