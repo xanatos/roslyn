@@ -221,7 +221,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
 
 
-        private BoundExpression TranslateLambdaBody(BoundNode node, ArrayBuilder<LocalSymbol> locals, ArrayBuilder<BoundExpression> initializers)
+        private BoundExpression TranslateLambdaBodyCore(BoundNode node, ArrayBuilder<LocalSymbol> locals, ArrayBuilder<BoundExpression> initializers)
         {
             var info = new LambdaCompilationInfo(this, locals, initializers);
             _lambdas.Push(info);
@@ -261,7 +261,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                             case BoundKind.ReturnStatement:
                                 if (EnsureLastStatement(stmts, i))
                                 {
-                                    var result = TranslateLambdaBody(((BoundReturnStatement)stmt).ExpressionOpt, locals, initializers);
+                                    var result = TranslateLambdaBodyCore(((BoundReturnStatement)stmt).ExpressionOpt, locals, initializers);
                                     if (result != null)
                                     {
                                         return result;
@@ -299,7 +299,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 }
             }
 
-            var res = TranslateLambdaBody(block, locals, initializers);
+            var res = TranslateLambdaBodyCore(block, locals, initializers);
 
             return res;
         }
