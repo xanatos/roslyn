@@ -220,7 +220,6 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
-
         private BoundExpression TranslateLambdaBodyCore(BoundNode node, ArrayBuilder<LocalSymbol> locals, ArrayBuilder<BoundExpression> initializers)
         {
             var info = new LambdaCompilationInfo(this, locals, initializers);
@@ -887,7 +886,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             var arg = Visit(argument);
 
-            return CSharpExprFactory("Bind", _bound.MethodInfo(method), _bound.StringLiteral(parameterName), arg);
+            return CSharpExprFactory("Bind", _bound.MethodInfo(method, useMethodBase: true), _bound.StringLiteral(parameterName), arg);
         }
 
         private BoundExpression VisitConditionalAccess(BoundConditionalAccess node)
