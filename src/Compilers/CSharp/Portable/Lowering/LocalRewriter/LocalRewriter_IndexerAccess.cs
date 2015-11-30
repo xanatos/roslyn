@@ -155,7 +155,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     out temps,
                     enableCallerInfo: ThreeState.True);
 
-                if (_inExpressionLambda && argumentNamesOpt.Length != 0)
+                if (_inExpressionLambda)
                 {
                     return oldNodeOpt != null ?
                         oldNodeOpt.Update(rewrittenReceiver, indexer, rewrittenArguments, argumentNamesOpt, argumentRefKindsOpt, expanded, argsToParamsOpt, type) :
