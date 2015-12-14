@@ -59,8 +59,17 @@ namespace Microsoft.CodeAnalysis.CSharp
                         // dyn.m = expr
                         var memberAccess = (BoundDynamicMemberAccess)left;
                         var loweredReceiver = VisitExpression(memberAccess.Receiver);
-                        return _dynamicFactory.MakeDynamicSetMember(loweredReceiver, memberAccess.Name, loweredRight).ToExpression();
+
+                        if (_inExpressionLambda)
+                        {
+                            loweredLeft = _dynamicFactory.MakeDynamicSetMemberExpression(loweredReceiver, memberAccess.Name);
+                        }
+                        else
+                        {
+                            return _dynamicFactory.MakeDynamicSetMember(loweredReceiver, memberAccess.Name, loweredRight).ToExpression();
+                        }
                     }
+                    break;
 
                 case BoundKind.DynamicIndexerAccess:
                     {
@@ -68,14 +77,27 @@ namespace Microsoft.CodeAnalysis.CSharp
                         var indexerAccess = (BoundDynamicIndexerAccess)left;
                         var loweredReceiver = VisitExpression(indexerAccess.Receiver);
                         var loweredArguments = VisitList(indexerAccess.Arguments);
-                        return MakeDynamicSetIndex(
-                            indexerAccess,
-                            loweredReceiver,
-                            loweredArguments,
-                            indexerAccess.ArgumentNamesOpt,
-                            indexerAccess.ArgumentRefKindsOpt,
-                            loweredRight);
+
+                        if (_inExpressionLambda)
+                        {
+                            loweredLeft = _dynamicFactory.MakeDynamicSetIndexExpression(
+                                loweredReceiver,
+                                loweredArguments,
+                                indexerAccess.ArgumentNamesOpt,
+                                indexerAccess.ArgumentRefKindsOpt);
+                        }
+                        else
+                        {
+                            return MakeDynamicSetIndex(
+                                indexerAccess,
+                                loweredReceiver,
+                                loweredArguments,
+                                indexerAccess.ArgumentNamesOpt,
+                                indexerAccess.ArgumentRefKindsOpt,
+                                loweredRight);
+                        }
                     }
+                    break;
 
                 default:
                     loweredLeft = VisitExpression(left);
