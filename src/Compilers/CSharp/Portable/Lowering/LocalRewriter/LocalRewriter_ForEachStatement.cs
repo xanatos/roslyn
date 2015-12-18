@@ -37,7 +37,9 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             if (_inExpressionLambda)
             {
-                return node;
+                var rewrittenExpression = (BoundExpression)Visit(node.Expression);
+                var rewrittenBody = (BoundStatement)Visit(node.Body);
+                return node.Update(node.EnumeratorInfoOpt, node.ElementConversion, node.IterationVariableType, node.IterationVariable, rewrittenExpression, rewrittenBody, node.Checked, node.BreakLabel, node.ContinueLabel);
             }
 
             BoundExpression collectionExpression = GetUnconvertedCollectionExpression(node);
