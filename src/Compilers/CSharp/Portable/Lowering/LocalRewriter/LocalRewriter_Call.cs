@@ -14,6 +14,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.PooledObjects;
 using Microsoft.CodeAnalysis.Operations;
 using Roslyn.Utilities;
+using System;
 
 namespace Microsoft.CodeAnalysis.CSharp
 {
@@ -562,10 +563,14 @@ namespace Microsoft.CodeAnalysis.CSharp
                     copyTo--;
                 }
 
-                for (var i = 0; i < copyTo; i++)
+                var n = Math.Min(copyTo, rewrittenArguments.Length);
+
+                for (var i = 0; i < n; i++)
                 {
                     actualArguments[i] = rewrittenArguments[i];
                 }
+
+                InsertMissingOptionalArguments(syntax, optionalParametersMethod.Parameters, actualArguments, enableCallerInfo);
             }
 
             return actualArguments.AsImmutableOrNull();
