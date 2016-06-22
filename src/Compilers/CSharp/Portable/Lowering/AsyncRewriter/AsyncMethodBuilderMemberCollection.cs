@@ -176,6 +176,72 @@ namespace Microsoft.CodeAnalysis.CSharp
                     collection: out collection);
             }
 
+            if (method.IsFutureReturningAsync(F.Compilation))
+            {
+                NamedTypeSymbol builderType = F.WellKnownType(WellKnownType.System_Runtime_CompilerServices_AsyncFutureMethodBuilder);
+
+                PropertySymbol Future;
+                if (!TryGetWellKnownPropertyAsMember(F, WellKnownMember.System_Runtime_CompilerServices_AsyncFutureMethodBuilder__Task, builderType, out Future))
+                {
+                    collection = default(AsyncMethodBuilderMemberCollection);
+                    return false;
+                }
+
+                return TryCreate(
+                    F: F,
+
+                    builderType: F.WellKnownType(WellKnownType.System_Runtime_CompilerServices_AsyncFutureMethodBuilder),
+                    resultType: F.SpecialType(SpecialType.System_Void),
+
+                    setException: WellKnownMember.System_Runtime_CompilerServices_AsyncFutureMethodBuilder__SetException,
+                    setResult: WellKnownMember.System_Runtime_CompilerServices_AsyncFutureMethodBuilder__SetResult,
+                    awaitOnCompleted: WellKnownMember.System_Runtime_CompilerServices_AsyncFutureMethodBuilder__AwaitOnCompleted,
+                    awaitUnsafeOnCompleted: WellKnownMember.System_Runtime_CompilerServices_AsyncFutureMethodBuilder__AwaitUnsafeOnCompleted,
+                    start: WellKnownMember.System_Runtime_CompilerServices_AsyncFutureMethodBuilder__Start_T,
+                    setStateMachine: WellKnownMember.System_Runtime_CompilerServices_AsyncFutureMethodBuilder__SetStateMachine,
+                    task: Future,
+                    collection: out collection);
+            }
+
+            if (method.IsGenericFutureReturningAsync(F.Compilation))
+            {
+                TypeSymbol resultType = method.ReturnType.GetMemberTypeArgumentsNoUseSiteDiagnostics().Single();
+
+                if (resultType.IsDynamic())
+                {
+                    resultType = F.SpecialType(SpecialType.System_Object);
+                }
+
+                if (typeMap != null)
+                {
+                    resultType = typeMap.SubstituteType(resultType).Type;
+                }
+
+                NamedTypeSymbol builderType = F.WellKnownType(WellKnownType.System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T).Construct(resultType);
+
+                PropertySymbol task;
+                if (!TryGetWellKnownPropertyAsMember(F, WellKnownMember.System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T__Task, builderType, out task))
+                {
+                    collection = default(AsyncMethodBuilderMemberCollection);
+                    return false;
+                }
+
+                return TryCreate(
+                    F: F,
+
+                    builderType: builderType,
+                    resultType: resultType,
+
+                    setException: WellKnownMember.System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T__SetException,
+                    setResult: WellKnownMember.System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T__SetResult,
+                    awaitOnCompleted: WellKnownMember.System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T__AwaitOnCompleted,
+                    awaitUnsafeOnCompleted: WellKnownMember.System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T__AwaitUnsafeOnCompleted,
+                    start: WellKnownMember.System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T__Start_T,
+                    setStateMachine: WellKnownMember.System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T__SetStateMachine,
+                    task: task,
+                    collection: out collection);
+            }
+
             throw ExceptionUtilities.UnexpectedValue(method);
         }
 

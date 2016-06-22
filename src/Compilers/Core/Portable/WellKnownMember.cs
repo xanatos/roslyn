@@ -332,6 +332,22 @@ namespace Microsoft.CodeAnalysis
         System_Runtime_CompilerServices_AsyncTaskMethodBuilder_T__SetStateMachine,
         System_Runtime_CompilerServices_AsyncTaskMethodBuilder_T__Task,
 
+        System_Runtime_CompilerServices_AsyncFutureMethodBuilder__SetException,
+        System_Runtime_CompilerServices_AsyncFutureMethodBuilder__SetResult,
+        System_Runtime_CompilerServices_AsyncFutureMethodBuilder__AwaitOnCompleted,
+        System_Runtime_CompilerServices_AsyncFutureMethodBuilder__AwaitUnsafeOnCompleted,
+        System_Runtime_CompilerServices_AsyncFutureMethodBuilder__Start_T,
+        System_Runtime_CompilerServices_AsyncFutureMethodBuilder__SetStateMachine,
+        System_Runtime_CompilerServices_AsyncFutureMethodBuilder__Task,
+
+        System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T__SetException,
+        System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T__SetResult,
+        System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T__AwaitOnCompleted,
+        System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T__AwaitUnsafeOnCompleted,
+        System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T__Start_T,
+        System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T__SetStateMachine,
+        System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T__Task,
+
         System_Runtime_CompilerServices_AsyncStateMachineAttribute__ctor,
         System_Runtime_CompilerServices_IteratorStateMachineAttribute__ctor,
 

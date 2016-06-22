@@ -2400,6 +2400,122 @@ namespace Microsoft.CodeAnalysis
                     1,
                     (byte)SignatureTypeCode.GenericTypeParameter, 0,
 
+                // System_Runtime_CompilerServices_AsyncFutureMethodBuilder__SetException
+                (byte)MemberFlags.Method,                                                                                   // Flags
+                (byte)WellKnownType.ExtSentinel, (byte)(WellKnownType.System_Runtime_CompilerServices_AsyncFutureMethodBuilder - WellKnownType.ExtSentinel), // DeclaringTypeId
+                0,                                                                                                          // Arity
+                    1,                                                                                                      // Method Signature
+                    (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_Void,
+                    (byte)SignatureTypeCode.TypeHandle, (byte)WellKnownType.System_Exception,
+
+                // System_Runtime_CompilerServices_AsyncFutureMethodBuilder__SetResult
+                (byte)MemberFlags.Method,                                                                                   // Flags
+                (byte)WellKnownType.ExtSentinel, (byte)(WellKnownType.System_Runtime_CompilerServices_AsyncFutureMethodBuilder - WellKnownType.ExtSentinel), // DeclaringTypeId
+                0,                                                                                                          // Arity
+                    0,                                                                                                      // Method Signature
+                    (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_Void,
+
+                // System_Runtime_CompilerServices_AsyncFutureMethodBuilder__AwaitOnCompleted
+                (byte)MemberFlags.Method,                                                                                   // Flags
+                (byte)WellKnownType.ExtSentinel, (byte)(WellKnownType.System_Runtime_CompilerServices_AsyncFutureMethodBuilder - WellKnownType.ExtSentinel), // DeclaringTypeId
+                2,                                                                                                          // Arity
+                    2,                                                                                                      // Method Signature
+                    (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_Void,
+                    (byte)SignatureTypeCode.ByReference, (byte)SignatureTypeCode.GenericMethodParameter, 0,
+                    (byte)SignatureTypeCode.ByReference, (byte)SignatureTypeCode.GenericMethodParameter, (byte)SpecialType.System_Object,
+
+                // System_Runtime_CompilerServices_AsyncFutureMethodBuilder__AwaitUnsafeOnCompleted
+                (byte)MemberFlags.Method,                                                                                   // Flags
+                (byte)WellKnownType.ExtSentinel, (byte)(WellKnownType.System_Runtime_CompilerServices_AsyncFutureMethodBuilder - WellKnownType.ExtSentinel), // DeclaringTypeId
+                2,                                                                                                          // Arity
+                    2,                                                                                                      // Method Signature
+                    (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_Void,
+                    (byte)SignatureTypeCode.ByReference, (byte)SignatureTypeCode.GenericMethodParameter, 0,
+                    (byte)SignatureTypeCode.ByReference, (byte)SignatureTypeCode.GenericMethodParameter, (byte)SpecialType.System_Object,
+
+                // System_Runtime_CompilerServices_AsyncFutureMethodBuilder__Start_T
+                (byte)MemberFlags.Method,                                                                                   // Flags
+                (byte)WellKnownType.ExtSentinel, (byte)(WellKnownType.System_Runtime_CompilerServices_AsyncFutureMethodBuilder - WellKnownType.ExtSentinel), // DeclaringTypeId
+                1,                                                                                                          // Arity
+                    1,                                                                                                      // Method Signature
+                    (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_Void,
+                    (byte)SignatureTypeCode.ByReference, (byte)SignatureTypeCode.GenericMethodParameter, 0,
+
+                // System_Runtime_CompilerServices_AsyncFutureMethodBuilder__SetStateMachine
+                (byte)MemberFlags.Method,                                                                                   // Flags
+                (byte)WellKnownType.ExtSentinel, (byte)(WellKnownType.System_Runtime_CompilerServices_AsyncFutureMethodBuilder - WellKnownType.ExtSentinel), // DeclaringTypeId
+                0,                                                                                                          // Arity
+                    1,                                                                                                      // Method Signature
+                    (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_Void,
+                    (byte)SignatureTypeCode.TypeHandle, (byte)WellKnownType.System_Runtime_CompilerServices_IAsyncStateMachine,
+
+                // System_Runtime_CompilerServices_AsyncFutureMethodBuilder__Task
+                (byte)MemberFlags.Property,                                                                                 // Flags
+                (byte)WellKnownType.ExtSentinel, (byte)(WellKnownType.System_Runtime_CompilerServices_AsyncFutureMethodBuilder - WellKnownType.ExtSentinel), // DeclaringTypeId
+                0,                                                                                                          // Arity
+                    0,                                                                                                      // Method Signature
+                    (byte)SignatureTypeCode.TypeHandle, (byte)WellKnownType.ExtSentinel, (byte)(WellKnownType.System_Futures_Future - WellKnownType.ExtSentinel),
+
+                // System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T__SetException
+                (byte)MemberFlags.Method,                                                                                   // Flags
+                (byte)WellKnownType.ExtSentinel, (byte)(WellKnownType.System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T - WellKnownType.ExtSentinel), // DeclaringTypeId
+                0,                                                                                                          // Arity
+                    1,                                                                                                      // Method Signature
+                    (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_Void,
+                    (byte)SignatureTypeCode.TypeHandle, (byte)WellKnownType.System_Exception,
+
+                // System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T__SetResult
+                (byte)MemberFlags.Method,                                                                                   // Flags
+                (byte)WellKnownType.ExtSentinel, (byte)(WellKnownType.System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T - WellKnownType.ExtSentinel), // DeclaringTypeId
+                0,                                                                                                          // Arity
+                    1,                                                                                                      // Method Signature
+                    (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_Void,
+                    (byte)SignatureTypeCode.GenericTypeParameter, 0,
+
+                // System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T__AwaitOnCompleted
+                (byte)MemberFlags.Method,                                                                                   // Flags
+                (byte)WellKnownType.ExtSentinel, (byte)(WellKnownType.System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T - WellKnownType.ExtSentinel), // DeclaringTypeId
+                2,                                                                                                          // Arity
+                    2,                                                                                                      // Method Signature
+                    (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_Void,
+                    (byte)SignatureTypeCode.ByReference, (byte)SignatureTypeCode.GenericMethodParameter, 0,
+                    (byte)SignatureTypeCode.ByReference, (byte)SignatureTypeCode.GenericMethodParameter, (byte)SpecialType.System_Object,
+
+                // System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T__AwaitUnsafeOnCompleted
+                (byte)MemberFlags.Method,                                                                                   // Flags
+                (byte)WellKnownType.ExtSentinel, (byte)(WellKnownType.System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T - WellKnownType.ExtSentinel), // DeclaringTypeId
+                2,                                                                                                          // Arity
+                    2,                                                                                                      // Method Signature
+                    (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_Void,
+                    (byte)SignatureTypeCode.ByReference, (byte)SignatureTypeCode.GenericMethodParameter, 0,
+                    (byte)SignatureTypeCode.ByReference, (byte)SignatureTypeCode.GenericMethodParameter, (byte)SpecialType.System_Object,
+
+                // System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T__Start_T
+                (byte)MemberFlags.Method,                                                                                   // Flags
+                (byte)WellKnownType.ExtSentinel, (byte)(WellKnownType.System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T - WellKnownType.ExtSentinel), // DeclaringTypeId
+                1,                                                                                                          // Arity
+                    1,                                                                                                      // Method Signature
+                    (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_Void,
+                    (byte)SignatureTypeCode.ByReference, (byte)SignatureTypeCode.GenericMethodParameter, 0,
+
+                // System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T__SetStateMachine
+                (byte)MemberFlags.Method,                                                                                   // Flags
+                (byte)WellKnownType.ExtSentinel, (byte)(WellKnownType.System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T - WellKnownType.ExtSentinel), // DeclaringTypeId
+                0,                                                                                                          // Arity
+                    1,                                                                                                      // Method Signature
+                    (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_Void,
+                    (byte)SignatureTypeCode.TypeHandle, (byte)WellKnownType.System_Runtime_CompilerServices_IAsyncStateMachine,
+
+                // System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T__Task
+                (byte)MemberFlags.Property,                                                                                 // Flags
+                (byte)WellKnownType.ExtSentinel, (byte)(WellKnownType.System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T - WellKnownType.ExtSentinel), // DeclaringTypeId
+                0,                                                                                                          // Arity
+                    0,                                                                                                      // Method Signature
+                    (byte)SignatureTypeCode.GenericTypeInstance,
+                    (byte)SignatureTypeCode.TypeHandle, (byte)WellKnownType.ExtSentinel, (byte)(WellKnownType.System_Futures_Future_T - WellKnownType.ExtSentinel),
+                    1,
+                    (byte)SignatureTypeCode.GenericTypeParameter, 0,
+
                 // System_Runtime_CompilerServices_AsyncStateMachineAttribute__ctor
                 (byte)MemberFlags.Constructor,                                                                              // Flags
                 (byte)WellKnownType.System_Runtime_CompilerServices_AsyncStateMachineAttribute,                             // DeclaringTypeId
@@ -3118,6 +3234,20 @@ namespace Microsoft.CodeAnalysis
                 "Start",                                    // System_Runtime_CompilerServices_AsyncTaskMethodBuilder_T__Start_T
                 "SetStateMachine",                          // System_Runtime_CompilerServices_AsyncTaskMethodBuilder_T__SetStateMachine
                 "Task",                                     // System_Runtime_CompilerServices_AsyncTaskMethodBuilder_T__Task
+                "SetException",                             // System_Runtime_CompilerServices_AsyncFutureMethodBuilder__SetException
+                "SetResult",                                // System_Runtime_CompilerServices_AsyncFutureMethodBuilder__SetResult
+                "AwaitOnCompleted",                         // System_Runtime_CompilerServices_AsyncFutureMethodBuilder__AwaitOnCompleted
+                "AwaitUnsafeOnCompleted",                   // System_Runtime_CompilerServices_AsyncFutureMethodBuilder__AwaitUnsafeOnCompleted
+                "Start",                                    // System_Runtime_CompilerServices_AsyncFutureMethodBuilder__Start_T
+                "SetStateMachine",                          // System_Runtime_CompilerServices_AsyncFutureMethodBuilder__SetStateMachine
+                "Task",                                     // System_Runtime_CompilerServices_AsyncFutureMethodBuilder__Task
+                "SetException",                             // System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T__SetException
+                "SetResult",                                // System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T__SetResult
+                "AwaitOnCompleted",                         // System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T__AwaitOnCompleted
+                "AwaitUnsafeOnCompleted",                   // System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T__AwaitUnsafeOnCompleted
+                "Start",                                    // System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T__Start_T
+                "SetStateMachine",                          // System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T__SetStateMachine
+                "Task",                                     // System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T__Task
                 ".ctor",                                    // System_Runtime_CompilerServices_AsyncStateMachineAttribute__ctor
                 ".ctor",                                    // System_Runtime_CompilerServices_IteratorStateMachineAttribute__ctor
                 "Asc",                                      // Microsoft_VisualBasic_Strings__AscCharInt32

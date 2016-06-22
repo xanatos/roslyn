@@ -378,7 +378,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             Location errorLocation = this.Locations[0];
 
             Debug.Assert(this.RefKind == RefKind.None);
-            if (!this.IsGenericTaskReturningAsync(this.DeclaringCompilation) && !this.IsTaskReturningAsync(this.DeclaringCompilation) && !this.IsVoidReturningAsync())
+            if (!this.IsGenericTaskReturningAsync(this.DeclaringCompilation) && !this.IsTaskReturningAsync(this.DeclaringCompilation) && !this.IsVoidReturningAsync() &&
+                !this.IsGenericFutureReturningAsync(this.DeclaringCompilation) && !this.IsFutureReturningAsync(this.DeclaringCompilation))
             {
                 // The return type of an async method must be void, Task or Task<T>
                 diagnostics.Add(ErrorCode.ERR_BadAsyncReturn, errorLocation);

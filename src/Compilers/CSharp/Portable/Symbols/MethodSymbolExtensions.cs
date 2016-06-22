@@ -283,6 +283,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         }
 
         /// <summary>
+        /// Returns whether this method is async and returns a future.
+        /// </summary>
+        public static bool IsFutureReturningAsync(this MethodSymbol method, CSharpCompilation compilation)
+        {
+            return method.IsAsync
+                && method.ReturnType == compilation.GetWellKnownType(WellKnownType.System_Futures_Future);
+        }
+
+        /// <summary>
         /// Returns whether this method is async and returns a generic task.
         /// </summary>
         public static bool IsGenericTaskReturningAsync(this MethodSymbol method, CSharpCompilation compilation)
@@ -291,6 +300,17 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 && (object)method.ReturnType != null
                 && method.ReturnType.Kind == SymbolKind.NamedType
                 && ((NamedTypeSymbol)method.ReturnType).ConstructedFrom == compilation.GetWellKnownType(WellKnownType.System_Threading_Tasks_Task_T);
+        }
+
+        /// <summary>
+        /// Returns whether this method is async and returns a generic task.
+        /// </summary>
+        public static bool IsGenericFutureReturningAsync(this MethodSymbol method, CSharpCompilation compilation)
+        {
+            return method.IsAsync
+                && (object)method.ReturnType != null
+                && method.ReturnType.Kind == SymbolKind.NamedType
+                && ((NamedTypeSymbol)method.ReturnType).ConstructedFrom == compilation.GetWellKnownType(WellKnownType.System_Futures_Future_T);
         }
     }
 }

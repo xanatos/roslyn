@@ -260,6 +260,12 @@ namespace Microsoft.CodeAnalysis
         System_ValueTuple_T7,
         System_ValueTuple_TRest,
 
+        System_Futures_Future,
+        System_Futures_Future_T,
+
+        System_Runtime_CompilerServices_AsyncFutureMethodBuilder,
+        System_Runtime_CompilerServices_AsyncFutureMethodBuilder_T,
+
         Available,
         Last = Available - 1,
     }
@@ -512,6 +518,12 @@ namespace Microsoft.CodeAnalysis
 
             "System.ValueTuple`7",
             "System.ValueTuple`8",
+
+            "System.Futures.Future",
+            "System.Futures.Future`1",
+
+            "System.Runtime.CompilerServices.AsyncFutureMethodBuilder",
+            "System.Runtime.CompilerServices.AsyncFutureMethodBuilder`1",
         };
 
         private readonly static Dictionary<string, WellKnownType> s_nameToTypeIdMap = new Dictionary<string, WellKnownType>((int)Count);
@@ -543,7 +555,7 @@ namespace Microsoft.CodeAnalysis
                 }
                 else if (typeId == WellKnownType.Last)
                 {
-                    typeIdName = "System.ValueTuple`8";
+                    typeIdName = "System.Runtime.CompilerServices.AsyncFutureMethodBuilder`1";
                 }
                 else if (typeId == WellKnownType.ExtSentinel)
                 {
