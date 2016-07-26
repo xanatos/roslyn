@@ -157,6 +157,9 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 if (_inExpressionLambda)
                 {
+                    // TODO: Fix compat issue where legacy trees emitted a get_ property access; should only use this path where the tree wasn't
+                    //       convertible to an expression tree before.
+
                     return oldNodeOpt != null ?
                         oldNodeOpt.Update(rewrittenReceiver, indexer, rewrittenArguments, argumentNamesOpt, argumentRefKindsOpt, expanded, argsToParamsOpt, type) :
                         new BoundIndexerAccess(syntax, rewrittenReceiver, indexer, rewrittenArguments, argumentNamesOpt, argumentRefKindsOpt, expanded, argsToParamsOpt, type);
