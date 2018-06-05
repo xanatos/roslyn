@@ -884,7 +884,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         public override BoundNode VisitThrowExpression(BoundThrowExpression node)
         {
-            if (_inExpressionLambda)
+            if (_inExpressionLambda && !HasCSharpExpression)
             {
                 Error(ErrorCode.ERR_ExpressionTreeContainsThrowExpression, node);
             }
