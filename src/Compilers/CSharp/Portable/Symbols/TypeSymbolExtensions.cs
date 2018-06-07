@@ -300,16 +300,29 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// <summary>
         /// return true if the type is constructed from System.Linq.Expressions.Expression`1
         /// </summary>
-        public static bool IsExpressionTree(this TypeSymbol _type)
+        public static bool IsExpressionTree(this TypeSymbol type)
         {
-            // TODO: there must be a better way!
-            var type = _type.OriginalDefinition as NamedTypeSymbol;
-            return
-                (object)type != null &&
-                type.Arity == 1 &&
-                type.MangleName &&
-                type.Name == "Expression" &&
-                CheckFullName(type.ContainingSymbol, s_expressionsNamespaceName);
+            // TODO-ETLIKE: Incorporate custom expression tree types here.
+
+            if (type.OriginalDefinition is NamedTypeSymbol namedType)
+            {
+                // NB: For now, the generalization of expression tree like types is restricted to open generic types where the type argument is interpreted as the delegate type.
+
+                if (namedType.Arity == 1 && namedType.MangleName)
+                {
+                    if (namedType.Name == "Expression" && CheckFullName(namedType.ContainingSymbol, s_expressionsNamespaceName))
+                    {
+                        return true;
+                    }
+
+                    if (IsCustomExpressionType(namedType, out _))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
 
@@ -1358,6 +1371,33 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 foreach (var attr in type.GetAttributes())
                 {
                     if (attr.IsTargetAttribute(type, AttributeDescription.AsyncMethodBuilderAttribute)
+                        && attr.CommonConstructorArguments.Length == 1
+                        && attr.CommonConstructorArguments[0].Kind == TypedConstantKind.Type)
+                    {
+                        builderArgument = attr.CommonConstructorArguments[0].Value;
+                        return true;
+                    }
+                }
+            }
+
+            builderArgument = null;
+            return false;
+        }
+
+        internal static bool IsCustomExpressionType(this NamedTypeSymbol type, out object builderArgument)
+        {
+            Debug.Assert((object)type != null);
+
+            var arity = type.Arity;
+
+            // NB: For now, we only support expression types parameterized by a delegate type (similar to Expression<TDelegate>).
+
+            if (arity == 1)
+            {
+                // Find the ExpressionBuilder attribute.
+                foreach (var attr in type.GetAttributes())
+                {
+                    if (attr.IsTargetAttribute(type, AttributeDescription.ExpressionBuilderAttribute)
                         && attr.CommonConstructorArguments.Length == 1
                         && attr.CommonConstructorArguments[0].Kind == TypedConstantKind.Type)
                     {

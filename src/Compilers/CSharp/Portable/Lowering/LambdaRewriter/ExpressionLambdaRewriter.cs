@@ -17,6 +17,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         private readonly Dictionary<ParameterSymbol, BoundExpression> _parameterMap = new Dictionary<ParameterSymbol, BoundExpression>();
         private readonly bool _ignoreAccessibility;
         private int _recursionDepth;
+        private bool _usingOriginalExpressionType;
 
         private NamedTypeSymbol _ExpressionType;
         private NamedTypeSymbol ExpressionType
@@ -94,8 +95,15 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         private DiagnosticBag Diagnostics { get { return _bound.Diagnostics; } }
 
-        private ExpressionLambdaRewriter(TypeCompilationState compilationState, TypeMap typeMap, SyntaxNode node, int recursionDepth, DiagnosticBag diagnostics)
+        private ExpressionLambdaRewriter(TypeCompilationState compilationState, TypeMap typeMap, SyntaxNode node, int recursionDepth, DiagnosticBag diagnostics, NamedTypeSymbol expressionType)
         {
+            if (expressionType == null)
+            {
+                _usingOriginalExpressionType = true;
+            }
+
+            _ExpressionType = expressionType;
+
             _bound = new SyntheticBoundNodeFactory(null, compilationState.Type, node, compilationState, diagnostics);
             _ignoreAccessibility = compilationState.ModuleBuilderOpt.IgnoreAccessibility;
             _int32Type = _bound.SpecialType(SpecialType.System_Int32);
@@ -109,12 +117,30 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         internal static BoundNode RewriteLambda(BoundLambda node, TypeCompilationState compilationState, TypeMap typeMap, int recursionDepth, DiagnosticBag diagnostics)
         {
+            var type = (NamedTypeSymbol)node.Type.OriginalDefinition;
+
+            NamedTypeSymbol expressionType = default;
+
+            if (type.IsCustomExpressionType(out var builderArgument))
+            {
+                expressionType = ValidateBuilderType(builderArgument, type.DeclaredAccessibility);
+
+                if (expressionType == null)
+                {
+                    // TODO-ETLIKE: Add better error; borrowing an error from similar code for builders now.
+
+                    diagnostics.Add(ErrorCode.ERR_BadAsyncReturn, node.Syntax.Location);
+                }
+            }
+
             try
             {
-                var r = new ExpressionLambdaRewriter(compilationState, typeMap, node.Syntax, recursionDepth, diagnostics);
+                var r = new ExpressionLambdaRewriter(compilationState, typeMap, node.Syntax, recursionDepth, diagnostics, expressionType);
                 var result = r.VisitLambdaInternal(node);
                 if (node.Type != result.Type)
                 {
+                    // TODO-ETLIKE: Review this error; if the expression tree factories are misbehaved, we should provide better error than "can't find Lambda method".
+
                     diagnostics.Add(ErrorCode.ERR_MissingPredefinedMember, node.Syntax.Location, r.ExpressionType, "Lambda");
                 }
                 return result;
@@ -124,6 +150,22 @@ namespace Microsoft.CodeAnalysis.CSharp
                 diagnostics.Add(ex.Diagnostic);
                 return node;
             }
+        }
+
+        private static NamedTypeSymbol ValidateBuilderType(object builderAttributeArgument, Accessibility declaredAccessibility)
+        {
+            var builderType = builderAttributeArgument as NamedTypeSymbol;
+
+            if ((object)builderType != null &&
+                 !builderType.IsErrorType() &&
+                 builderType.SpecialType != SpecialType.System_Void &&
+                 builderType.DeclaredAccessibility == declaredAccessibility && // TODO-ETLIKE: Review accessibility requirements.
+                 !builderType.IsGenericType)
+            {
+                return builderType;
+            }
+
+            return null;
         }
 
         private BoundExpression TranslateLambdaBody(BoundBlock block)
@@ -171,6 +213,15 @@ namespace Microsoft.CodeAnalysis.CSharp
             _bound.Syntax = node.Syntax;
             var result = VisitInternal(node);
             _bound.Syntax = old;
+
+            // NB: When using factory methods for expression tree like types, we don't insert any conversions. We just emit the calls.
+            //     I.e. we don't require the type containing the factory methods to be the base type of the expressions returned.
+
+            if (result.HasErrors || !_usingOriginalExpressionType)
+            {
+                return result;
+            }
+
             return _bound.Convert(ExpressionType, result);
         }
 
@@ -1072,6 +1123,8 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         private BoundExpression ExprFactory(string name, params BoundExpression[] arguments)
         {
+            // TODO-ETLIKE: Do we want to inspect errors (such as method not found) here and turn them into a more specific error with wording hinting at missing members on a builder type?
+
             return _bound.StaticCall(ExpressionType, name, arguments);
         }
 
