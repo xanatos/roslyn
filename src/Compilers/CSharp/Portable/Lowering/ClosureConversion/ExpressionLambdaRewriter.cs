@@ -518,10 +518,15 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 var arg = node.Indices[0];
                 var index = Visit(arg);
+
+                // REVIEW: It seems the following type check can never be false, because `index` is of type `Expression` (unlike `arg`).
+                //         See commit https://github.com/dotnet/roslyn/commit/7b81dc50a709a3fff6177561917b04cd0bcf5e8f where this was tweaked.
+
                 if (!TypeSymbol.Equals(index.Type, _int32Type, TypeCompareKind.ConsiderEverything2))
                 {
                     index = ConvertIndex(index, arg.Type, _int32Type);
                 }
+
                 return ExprFactory("ArrayIndex", array, index);
             }
             else
@@ -536,10 +541,15 @@ namespace Microsoft.CodeAnalysis.CSharp
             foreach (var arg in expressions)
             {
                 var index = Visit(arg);
+
+                // REVIEW: It seems the following type check can never be false, because `index` is of type `Expression` (unlike `arg`).
+                //         See commit https://github.com/dotnet/roslyn/commit/7b81dc50a709a3fff6177561917b04cd0bcf5e8f where this was tweaked.
+
                 if (!TypeSymbol.Equals(index.Type, _int32Type, TypeCompareKind.ConsiderEverything2))
                 {
                     index = ConvertIndex(index, arg.Type, _int32Type);
                 }
+
                 builder.Add(index);
             }
 
