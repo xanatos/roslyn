@@ -369,6 +369,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                 builder.Add(index);
             }
 
+            // TODO-ETLIKE: We can't use ExpressionType here, because we don't know a common base type in the generalized expression type case.
+            //              Should we instead emit a call with N arguments, where further binding steps could e.g. bind to a `params` array overload?
+
             return _bound.ArrayOrEmpty(ExpressionType, builder.ToImmutableAndFree());
         }
 
@@ -379,6 +382,9 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 builder.Add(Visit(arg));
             }
+
+            // TODO-ETLIKE: We can't use ExpressionType here, because we don't know a common base type in the generalized expression type case.
+            //              Should we instead emit a call with N arguments, where further binding steps could e.g. bind to a `params` array overload?
 
             return _bound.ArrayOrEmpty(ExpressionType, builder.ToImmutableAndFree());
         }
@@ -785,7 +791,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         private BoundExpression VisitLambda(BoundLambda node)
         {
             var result = VisitLambdaInternal(node);
-            return node.Type.IsExpressionTree() ? ExprFactory("Quote", result) : result;
+            return node.Type.IsExpressionTree() ? ExprFactory("Quote", result) : result; // TODO-ETLIKE: The IsExpressionTree check can return another "family" of expressions; can we quote across such families?
         }
 
         private BoundExpression VisitLambdaInternal(BoundLambda node)
