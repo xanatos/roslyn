@@ -1,5 +1,7 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
+#define QUERY_METHOD_USE_AWAIT_SUFFIX
+
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -720,11 +722,13 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         protected BoundCall MakeQueryInvocation(CSharpSyntaxNode node, BoundExpression receiver, string methodName, SeparatedSyntaxList<TypeSyntax> typeArgsSyntax, ImmutableArray<TypeSymbolWithAnnotations> typeArgs, ImmutableArray<BoundExpression> args, DiagnosticBag diagnostics)
         {
+#if QUERY_METHOD_USE_AWAIT_SUFFIX
             var hasAsync = args.Any(arg => arg is UnboundLambda l && l.IsAsync);
             if (hasAsync)
             {
                 methodName += "Await";
             }
+#endif
 
             // clean up the receiver
             var ultimateReceiver = receiver;
