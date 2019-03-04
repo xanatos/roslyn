@@ -1,5 +1,7 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
+#define QUERY_METHOD_USE_AWAIT_SUFFIX
+
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -153,7 +155,13 @@ namespace Microsoft.CodeAnalysis.CSharp
                         var e = state.fromExpression;
                         var v = selectClause.Expression;
                         var lambda = MakeQueryUnboundLambda(state.RangeVariableMap(), x, v);
-                        var result = MakeQueryInvocation(state.selectOrGroup, e, "Select", lambda, diagnostics);
+
+#if QUERY_METHOD_USE_AWAIT_SUFFIX
+                        var methodName = lambda.IsAsync ? "SelectAwait" : "Select";
+#else
+                        var methodName = "Select";
+#endif
+                        var result = MakeQueryInvocation(state.selectOrGroup, e, methodName, lambda, diagnostics);
                         return MakeQueryClause(selectClause, result, queryInvocation: result);
                     }
                 case SyntaxKind.GroupClause:
@@ -175,8 +183,15 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                         // this is the unoptimized form (when v is not the identifier x)
                         var d = DiagnosticBag.GetInstance();
-                        BoundExpression lambdaRight = MakeQueryUnboundLambda(state.RangeVariableMap(), x, v);
-                        result = MakeQueryInvocation(state.selectOrGroup, e, "GroupBy", ImmutableArray.Create(lambdaLeft, lambdaRight), d);
+                        var lambdaRight = MakeQueryUnboundLambda(state.RangeVariableMap(), x, v);
+
+#if QUERY_METHOD_USE_AWAIT_SUFFIX
+                        var methodName = lambdaLeft.IsAsync || lambdaRight.IsAsync ? "GroupByAwait" : "GroupBy";
+#else
+                        var methodName = "GroupBy";
+#endif
+
+                        result = MakeQueryInvocation(state.selectOrGroup, e, methodName, ImmutableArray.Create<BoundExpression>(lambdaLeft, lambdaRight), d);
                         // k and v appear reversed in the invocation, so we reorder their evaluation
                         result = ReverseLastTwoParameterOrder(result);
 
@@ -185,7 +200,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         {
                             // The optimized form.  We store the unoptimized form for analysis
                             unoptimizedForm = result;
-                            result = MakeQueryInvocation(state.selectOrGroup, e, "GroupBy", lambdaLeft, diagnostics);
+                            result = MakeQueryInvocation(state.selectOrGroup, e, methodName, lambdaLeft, diagnostics);
                             if (unoptimizedForm.HasAnyErrors && !result.HasAnyErrors) unoptimizedForm = null;
                         }
                         else
@@ -262,7 +277,12 @@ namespace Microsoft.CodeAnalysis.CSharp
             // is translated into
             //     from x in ( e ) . Where ( x => f )
             var lambda = MakeQueryUnboundLambda(state.RangeVariableMap(), state.rangeVariable, where.Condition);
-            var invocation = MakeQueryInvocation(where, state.fromExpression, "Where", lambda, diagnostics);
+#if QUERY_METHOD_USE_AWAIT_SUFFIX
+            var methodName = lambda.IsAsync ? "WhereAwait" : "Where";
+#else
+            var methodName = "Where";
+#endif
+            var invocation = MakeQueryInvocation(where, state.fromExpression, methodName, lambda, diagnostics);
             state.fromExpression = MakeQueryClause(where, invocation, queryInvocation: invocation);
         }
 
@@ -310,10 +330,16 @@ namespace Microsoft.CodeAnalysis.CSharp
                     //     ( e1 ) . Join( e2 , x1 => k1 , x2 => k2 , ( x1 , x2 ) => v )
                     var resultSelectorLambda = MakeQueryUnboundLambda(state.RangeVariableMap(), ImmutableArray.Create(x1, x2), select.Expression);
 
+#if QUERY_METHOD_USE_AWAIT_SUFFIX
+                    var methodName = outerKeySelectorLambda.IsAsync || innerKeySelectorLambda.IsAsync || resultSelectorLambda.IsAsync ? "JoinAwait" : "Join";
+#else
+                    var methodName = "Join";
+#endif
+
                     invocation = MakeQueryInvocation(
                         join,
                         state.fromExpression,
-                        "Join",
+                        methodName,
                         ImmutableArray.Create(inExpression, outerKeySelectorLambda, innerKeySelectorLambda, resultSelectorLambda),
                         diagnostics);
                 }
@@ -331,10 +357,16 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                     var resultSelectorLambda = MakeQueryUnboundLambda(state.RangeVariableMap(), ImmutableArray.Create(x1, g), select.Expression);
 
+#if QUERY_METHOD_USE_AWAIT_SUFFIX
+                    var methodName = outerKeySelectorLambda.IsAsync || innerKeySelectorLambda.IsAsync || resultSelectorLambda.IsAsync ? "GroupJoinAwait" : "GroupJoin";
+#else
+                    var methodName = "GroupJoin";
+#endif
+
                     invocation = MakeQueryInvocation(
                         join,
                         state.fromExpression,
-                        "GroupJoin",
+                        methodName,
                         ImmutableArray.Create(inExpression, outerKeySelectorLambda, innerKeySelectorLambda, resultSelectorLambda),
                         diagnostics);
 
@@ -364,10 +396,16 @@ namespace Microsoft.CodeAnalysis.CSharp
                     //     ...
                     var resultSelectorLambda = MakePairLambda(join, state, x1, x2);
 
+#if QUERY_METHOD_USE_AWAIT_SUFFIX
+                    var methodName = outerKeySelectorLambda.IsAsync || innerKeySelectorLambda.IsAsync ? "JoinAwait" : "Join";
+#else
+                    var methodName = "Join";
+#endif
+
                     invocation = MakeQueryInvocation(
                         join,
                         state.fromExpression,
-                        "Join",
+                        methodName,
                         ImmutableArray.Create(inExpression, outerKeySelectorLambda, innerKeySelectorLambda, resultSelectorLambda),
                         diagnostics);
                 }
@@ -387,10 +425,16 @@ namespace Microsoft.CodeAnalysis.CSharp
                     var g = state.AddRangeVariable(this, join.Into.Identifier, diagnostics);
                     var resultSelectorLambda = MakePairLambda(join, state, x1, g);
 
+#if QUERY_METHOD_USE_AWAIT_SUFFIX
+                    var methodName = outerKeySelectorLambda.IsAsync || innerKeySelectorLambda.IsAsync ? "GroupJoinAwait" : "GroupJoin";
+#else
+                    var methodName = "GroupJoin";
+#endif
+
                     invocation = MakeQueryInvocation(
                         join,
                         state.fromExpression,
-                        "GroupJoin",
+                        methodName,
                         ImmutableArray.Create(inExpression, outerKeySelectorLambda, innerKeySelectorLambda, resultSelectorLambda),
                         diagnostics);
 
@@ -424,6 +468,12 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 string methodName = (first ? "OrderBy" : "ThenBy") + (ordering.IsKind(SyntaxKind.DescendingOrdering) ? "Descending" : "");
                 var lambda = MakeQueryUnboundLambda(state.RangeVariableMap(), state.rangeVariable, ordering.Expression);
+#if QUERY_METHOD_USE_AWAIT_SUFFIX
+                if (lambda.IsAsync)
+                {
+                    methodName += "Await";
+                }
+#endif
                 var invocation = MakeQueryInvocation(ordering, state.fromExpression, methodName, lambda, diagnostics);
                 state.fromExpression = MakeQueryClause(ordering, invocation, queryInvocation: invocation);
                 first = false;
@@ -436,7 +486,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             var x1 = state.rangeVariable;
 
-            BoundExpression collectionSelectorLambda;
+            UnboundLambda collectionSelectorLambda;
             if (from.Type == null)
             {
                 collectionSelectorLambda = MakeQueryUnboundLambda(state.RangeVariableMap(), x1, from.Expression);
@@ -460,11 +510,17 @@ namespace Microsoft.CodeAnalysis.CSharp
                 //     ( e1 ) . SelectMany( x1 => e2 , ( x1 , x2 ) => v )
                 var resultSelectorLambda = MakeQueryUnboundLambda(state.RangeVariableMap(), ImmutableArray.Create(x1, x2), select.Expression);
 
+#if QUERY_METHOD_USE_AWAIT_SUFFIX
+                var methodName = collectionSelectorLambda.IsAsync || resultSelectorLambda.IsAsync ? "SelectManyAwait" : "SelectMany";
+#else
+                var methodName = "SelectMany";
+#endif
+
                 var invocation = MakeQueryInvocation(
                     from,
                     state.fromExpression,
-                    "SelectMany",
-                    ImmutableArray.Create(collectionSelectorLambda, resultSelectorLambda),
+                    methodName,
+                    ImmutableArray.Create<BoundExpression>(collectionSelectorLambda, resultSelectorLambda),
                     diagnostics);
 
                 // Adjust the second-to-last parameter to be a query clause (if it was an extension method, an extra parameter was added)
@@ -499,11 +555,17 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // to represent the transparent identifier in the result.
                 var resultSelectorLambda = MakePairLambda(from, state, x1, x2);
 
+#if QUERY_METHOD_USE_AWAIT_SUFFIX
+                var methodName = collectionSelectorLambda.IsAsync ? "SelectManyAwait" : "SelectMany";
+#else
+                var methodName = "SelectMany";
+#endif
+
                 var invocation = MakeQueryInvocation(
                     from,
                     state.fromExpression,
-                    "SelectMany",
-                    ImmutableArray.Create(collectionSelectorLambda, resultSelectorLambda),
+                    methodName,
+                    ImmutableArray.Create<BoundExpression>(collectionSelectorLambda, resultSelectorLambda),
                     diagnostics);
 
                 BoundExpression castInvocation = (from.Type != null) ? ExtractCastInvocation(invocation) : null;
@@ -660,7 +722,9 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         private UnboundLambda MakeQueryUnboundLambda(RangeVariableMap qvm, ImmutableArray<RangeVariableSymbol> parameters, ExpressionSyntax expression)
         {
-            return MakeQueryUnboundLambda(expression, new QueryUnboundLambdaState(this, qvm, parameters, (LambdaSymbol lambdaSymbol, Binder lambdaBodyBinder, DiagnosticBag diagnostics) =>
+            var isAsync = AwaitSyntaxDetector.ContainsAwait(expression);
+
+            return MakeQueryUnboundLambda(expression, new QueryUnboundLambdaState(this, qvm, parameters, isAsync, (LambdaSymbol lambdaSymbol, Binder lambdaBodyBinder, DiagnosticBag diagnostics) =>
             {
                 lambdaBodyBinder = lambdaBodyBinder.GetBinder(expression);
                 Debug.Assert(lambdaSymbol != null);
@@ -671,7 +735,9 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         private UnboundLambda MakeQueryUnboundLambdaWithCast(RangeVariableMap qvm, RangeVariableSymbol parameter, ExpressionSyntax expression, TypeSyntax castTypeSyntax, TypeSymbolWithAnnotations castType)
         {
-            return MakeQueryUnboundLambda(expression, new QueryUnboundLambdaState(this, qvm, ImmutableArray.Create(parameter), (LambdaSymbol lambdaSymbol, Binder lambdaBodyBinder, DiagnosticBag diagnostics) =>
+            var isAsync = AwaitSyntaxDetector.ContainsAwait(expression);
+
+            return MakeQueryUnboundLambda(expression, new QueryUnboundLambdaState(this, qvm, ImmutableArray.Create(parameter), isAsync, (LambdaSymbol lambdaSymbol, Binder lambdaBodyBinder, DiagnosticBag diagnostics) =>
             {
                 lambdaBodyBinder = lambdaBodyBinder.GetBinder(expression);
                 Debug.Assert(lambdaBodyBinder != null);
@@ -686,7 +752,9 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         private UnboundLambda MakeQueryUnboundLambda(RangeVariableMap qvm, ImmutableArray<RangeVariableSymbol> parameters, CSharpSyntaxNode node, LambdaBodyFactory bodyFactory)
         {
-            return MakeQueryUnboundLambda(node, new QueryUnboundLambdaState(this, qvm, parameters, bodyFactory));
+            var isAsync = AwaitSyntaxDetector.ContainsAwait(node);
+
+            return MakeQueryUnboundLambda(node, new QueryUnboundLambdaState(this, qvm, parameters, isAsync, bodyFactory));
         }
 
         private UnboundLambda MakeQueryUnboundLambda(CSharpSyntaxNode node, QueryUnboundLambdaState state)
@@ -714,6 +782,9 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         protected BoundCall MakeQueryInvocation(CSharpSyntaxNode node, BoundExpression receiver, string methodName, SeparatedSyntaxList<TypeSyntax> typeArgsSyntax, ImmutableArray<TypeSymbolWithAnnotations> typeArgs, ImmutableArray<BoundExpression> args, DiagnosticBag diagnostics)
         {
+            var hasAsync = args.Any(arg => arg is UnboundLambda l && l.IsAsync);
+            Debug.Assert(!hasAsync || methodName.EndsWith("Await"));
+
             // clean up the receiver
             var ultimateReceiver = receiver;
             while (ultimateReceiver.Kind == BoundKind.QueryClause) ultimateReceiver = ((BoundQueryClause)ultimateReceiver).Value;
@@ -793,6 +864,23 @@ namespace Microsoft.CodeAnalysis.CSharp
             result.WasCompilerGenerated = true;
             analyzedArguments.Free();
             return result;
+        }
+
+        private sealed class AwaitSyntaxDetector : CSharpSyntaxWalker
+        {
+            private bool _sawAwait;
+
+            public static bool ContainsAwait(CSharpSyntaxNode node)
+            {
+                var detector = new AwaitSyntaxDetector();
+                detector.Visit(node);
+                return detector._sawAwait;
+            }
+
+            public override void VisitAwaitExpression(AwaitExpressionSyntax node)
+            {
+                _sawAwait = true;
+            }
         }
     }
 }

@@ -155,10 +155,14 @@ namespace Microsoft.CodeAnalysis.CSharp
                         }
                         if (method.MethodKind == MethodKind.AnonymousFunction)
                         {
-                            info = method.IsImplicitlyDeclared ?
-                                // The await expression occurred in a query expression:
-                                new CSDiagnosticInfo(ErrorCode.ERR_BadAwaitInQuery) :
-                                new CSDiagnosticInfo(ErrorCode.ERR_BadAwaitWithoutAsyncLambda, ((LambdaSymbol)method).MessageID.Localize());
+                            if (!method.IsImplicitlyDeclared)
+                            {
+                                info = new CSDiagnosticInfo(ErrorCode.ERR_BadAwaitWithoutAsyncLambda, ((LambdaSymbol)method).MessageID.Localize());
+                            }
+                            else
+                            {
+                                return false;// NB: allows await in query expressions
+                            }
                         }
                         else
                         {
