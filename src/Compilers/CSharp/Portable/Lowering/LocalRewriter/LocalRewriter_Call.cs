@@ -531,7 +531,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // Optimize away unnecessary temporaries.
                 // Necessary temporaries have their store instructions merged into the appropriate 
                 // argument expression.
-                OptimizeTemporaries(actualArguments, refKinds, storesToTemps, temporariesBuilder);
+                OptimizeTemporaries(actualArguments, storesToTemps, temporariesBuilder);
 
                 // Step two: If we have a params array, build the array and fill in the argument.
                 if (expanded)
@@ -557,28 +557,60 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 argumentRefKindsOpt = GetRefKindsOrNull(refKinds);
                 refKinds.Free();
+
+                return actualArguments.AsImmutableOrNull();
             }
             else
             {
-                var copyTo = actualArguments.Length;
+                temps = temporariesBuilder.AsImmutable();
+
+                var paramsExpression = default(BoundExpression);
+
+                var hasMissingParameters = false;
 
                 if (expanded)
                 {
-                    actualArguments[actualArguments.Length - 1] = BuildParamsArray(syntax, methodOrIndexer, argsToParamsOpt, rewrittenArguments, parameters, actualArguments[actualArguments.Length - 1]);
-                    copyTo--;
+                    paramsExpression = BuildParamsArray(syntax, methodOrIndexer, argsToParamsOpt, rewrittenArguments, parameters, paramsExpression);
                 }
-
-                var n = Math.Min(copyTo, rewrittenArguments.Length);
-
-                for (var i = 0; i < n; i++)
+                else
                 {
-                    actualArguments[i] = rewrittenArguments[i];
+                    hasMissingParameters = parameters.Length != rewrittenArguments.Length;
                 }
 
-                InsertMissingOptionalArguments(syntax, optionalParametersMethod.Parameters, actualArguments, enableCallerInfo);
-            }
+                // NB: We may have omitted optional parameters, so just copy what we got. The expression
+                //     lambda rewriter will take further steps to produce bindings. Note that we don't
+                //     fill in missing optional arguments; we let the runtime library do that.
+                //
+                // DESIGN: Is the above reasonable? It will miss filling in caller info attributes as well,
+                //         which makes sense because a runtime invocation may have other caller info than
+                //         the original apparent call site in the expression. Unfortunately, our runtime
+                //         library does not have any logic to bind caller info, so it will get its default
+                //         parameter values instead.
 
-            return actualArguments.AsImmutableOrNull();
+                if (hasMissingParameters)
+                {
+                    Debug.Assert(!rewrittenArguments.Any(a => a == null));
+                    return rewrittenArguments.AsImmutableOrNull();
+                }
+                else
+                {
+                    var quotedArguments = new BoundExpression[parameters.Length];
+
+                    var copyTo = parameters.Length;
+                    if (paramsExpression != null)
+                    {
+                        copyTo--;
+                        quotedArguments[quotedArguments.Length - 1] = paramsExpression;
+                    }
+
+                    for (var i = 0; i < copyTo; i++)
+                    {
+                        quotedArguments[i] = rewrittenArguments[i];
+                    }
+
+                    return quotedArguments.AsImmutableOrNull();
+                }
+            }
         }
 
         /// <summary>

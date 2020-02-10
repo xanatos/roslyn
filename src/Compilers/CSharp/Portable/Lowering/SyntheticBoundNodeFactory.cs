@@ -1196,7 +1196,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 WellKnownType(Microsoft.CodeAnalysis.WellKnownType.System_Reflection_MethodInfo);
 
             return new BoundMethodInfo(
-                Syntax, 
+                Syntax,
                 method,
                 GetMethodFromHandleMethod(method.ContainingType),
                 type)
@@ -1303,29 +1303,6 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         public BoundExpression Array(TypeSymbol elementType, ImmutableArray<BoundExpression> elements)
         {
-            if (elements.Length == 0)
-            {
-                MethodSymbol arrayEmpty = Compilation.GetWellKnownTypeMember(CodeAnalysis.WellKnownMember.System_Array__Empty) as MethodSymbol;
-                if (arrayEmpty != null) // will be null if Array.Empty<T> doesn't exist in reference assemblies
-                {
-                    // return an invocation of "Array.Empty<T>()"
-                    arrayEmpty = arrayEmpty.Construct(ImmutableArray.Create(elementType));
-                    return new BoundCall(
-                        Syntax,
-                        null,
-                        arrayEmpty,
-                        ImmutableArray<BoundExpression>.Empty,
-                        default(ImmutableArray<string>),
-                        default(ImmutableArray<RefKind>),
-                        isDelegateCall: false,
-                        expanded: false,
-                        invokedAsExtensionMethod: false,
-                        argsToParamsOpt: default(ImmutableArray<int>),
-                        resultKind: LookupResultKind.Viable,
-                        type: arrayEmpty.ReturnType);
-                }
-            }
-
             return new BoundArrayCreation(
                 Syntax,
                 ImmutableArray.Create<BoundExpression>(Literal(elements.Length)),

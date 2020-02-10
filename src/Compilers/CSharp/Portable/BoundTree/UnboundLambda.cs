@@ -67,7 +67,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         SyntaxNode IBoundLambdaOrFunction.Syntax { get { return Syntax; } }
 
         public BoundLambda(SyntaxNode syntax, UnboundLambda unboundLambda, BoundBlock body, ImmutableArray<Diagnostic> diagnostics, Binder binder, TypeSymbol delegateType, bool isAsync, InferredLambdaReturnType inferredReturnType)
-            : this(syntax, unboundLambda.WithNoCache(), (LambdaSymbol)binder.ContainingMemberOrLambda, body, diagnostics, binder, delegateType, isAsync)
+            : this(syntax, unboundLambda.WithNoCache(), (LambdaSymbol)binder.ContainingMemberOrLambda, body, diagnostics, binder, isAsync, delegateType)
         {
             InferredReturnType = inferredReturnType;
 
@@ -968,6 +968,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     diagnostics.ToReadOnlyAndFree(),
                     lambdaBodyBinder,
                     delegateType,
+                    lambda.IsAsync,
                     new InferredLambdaReturnType(inferredReturnType.NumExpressions, inferredReturnType.HadExpressionlessReturn, refKind, returnType, ImmutableArray<DiagnosticInfo>.Empty))
                 { WasCompilerGenerated = _unboundLambda.WasCompilerGenerated };
             }

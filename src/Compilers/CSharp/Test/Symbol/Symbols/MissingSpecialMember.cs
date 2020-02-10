@@ -562,7 +562,7 @@ namespace System
                 SystemXmlLinqRef,
                 SystemWindowsFormsRef,
                 ValueTupleRef,
-                CSharpExpressionsRef
+                //CSharpExpressionsRef
             }.Concat(WinRtRefs).ToArray();
             var comp = CreateEmptyCompilation("", refs);
 
@@ -889,7 +889,7 @@ namespace System
                 SystemXmlLinqRef,
                 SystemWindowsFormsRef,
                 ValueTupleRef,
-                CSharpExpressionsRef
+                //CSharpExpressionsRef
             }.Concat(WinRtRefs).ToArray();
             var comp = CreateEmptyCompilation("", refs);
 

@@ -24,7 +24,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             if (_inExpressionLambda)
             {
-                return node.Update(rewrittenCondition, rewrittenBody, node.BreakLabel, node.ContinueLabel);
+                return node.Update(node.Locals, rewrittenCondition, rewrittenBody, node.BreakLabel, node.ContinueLabel);
             }
 
             var startLabel = new GeneratedLabelSymbol("start");

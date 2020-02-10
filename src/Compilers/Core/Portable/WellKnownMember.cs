@@ -508,6 +508,8 @@ namespace Microsoft.CodeAnalysis
         System_Runtime_CompilerServices_NativeIntegerAttribute__ctor,
         System_Runtime_CompilerServices_NativeIntegerAttribute__ctorTransformFlags,
 
+        Microsoft_CSharp_Expressions_CSharpExpression__SwitchCaseDefaultValue,
+
         Count
 
         // Remember to update the AllWellKnownTypeMembers tests when making changes here

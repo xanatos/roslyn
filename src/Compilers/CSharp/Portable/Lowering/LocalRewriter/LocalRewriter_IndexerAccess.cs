@@ -161,8 +161,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                     //       convertible to an expression tree before.
 
                     return oldNodeOpt != null ?
-                        oldNodeOpt.Update(rewrittenReceiver, indexer, rewrittenArguments, argumentNamesOpt, argumentRefKindsOpt, expanded, argsToParamsOpt, type) :
-                        new BoundIndexerAccess(syntax, rewrittenReceiver, indexer, rewrittenArguments, argumentNamesOpt, argumentRefKindsOpt, expanded, argsToParamsOpt, type);
+                        oldNodeOpt.Update(rewrittenReceiver, indexer, rewrittenArguments, argumentNamesOpt, argumentRefKindsOpt, expanded, argsToParamsOpt, oldNodeOpt.BinderOpt, oldNodeOpt.UseSetterForDefaultArgumentGeneration, type) :
+                        new BoundIndexerAccess(syntax, rewrittenReceiver, indexer, rewrittenArguments, argumentNamesOpt, argumentRefKindsOpt, expanded, argsToParamsOpt, oldNodeOpt.BinderOpt, oldNodeOpt.UseSetterForDefaultArgumentGeneration, type);
                 }
 
                 BoundExpression call = MakePropertyGetAccess(syntax, rewrittenReceiver, indexer, rewrittenArguments, getMethod);

@@ -34,6 +34,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         private bool _sawAwait;
         private bool _sawAwaitInExceptionHandler;
+        private bool _sawExpressionLambda;
         private bool _needsSpilling;
         private readonly DiagnosticBag _diagnostics;
         private Instrumenter _instrumenter;
@@ -126,7 +127,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                     dynamicAnalysisSpans = dynamicInstrumenter.DynamicAnalysisSpans;
                 }
 #if DEBUG
-                LocalRewritingValidator.Validate(loweredStatement);
+                if (!localRewriter._sawExpressionLambda)
+                {
+                    LocalRewritingValidator.Validate(loweredStatement);
+                }
 #endif
                 return loweredStatement;
             }

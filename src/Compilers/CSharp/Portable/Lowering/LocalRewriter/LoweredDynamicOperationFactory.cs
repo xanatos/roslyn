@@ -325,7 +325,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         internal BoundQuotedDynamicCall MakeDynamicMemberInvocationExpression(
             string name,
             BoundExpression loweredReceiver,
-            ImmutableArray<TypeSymbol> typeArguments,
+            ImmutableArray<TypeWithAnnotations> typeArgumentsWithAnnotations,
             ImmutableArray<BoundExpression> loweredArguments,
             ImmutableArray<string> argumentNames,
             ImmutableArray<RefKind> refKinds,
@@ -376,9 +376,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                 loweredReceiver,
                 receiverStaticType,
                 _factory.Literal(name),
-                typeArguments.IsDefaultOrEmpty ?
+                typeArgumentsWithAnnotations.IsDefaultOrEmpty ?
                     _factory.Null(_factory.WellKnownArrayType(WellKnownType.System_Type)) :
-                    _factory.Array(_factory.WellKnownType(WellKnownType.System_Type), _factory.TypeOfs(typeArguments)),
+                    _factory.Array(_factory.WellKnownType(WellKnownType.System_Type), _factory.TypeOfs(typeArgumentsWithAnnotations)),
                 args,
                 _factory.Literal((int)binderFlags),
                 _factory.TypeofDynamicOperationContextType(),
@@ -516,7 +516,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
 
         internal BoundExpression MakeDynamicConstructorInvocationExpression(
-            CSharpSyntaxNode syntax,
+            SyntaxNode syntax,
             TypeSymbol type,
             ImmutableArray<BoundExpression> loweredArguments,
             ImmutableArray<string> argumentNames,
@@ -860,7 +860,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
 
         internal ImmutableArray<BoundQuotedDynamicArgument> MakeDynamicArgumentExpressions(
-            CSharpSyntaxNode syntax,
+            SyntaxNode syntax,
             ImmutableArray<BoundExpression> loweredArguments,
             ImmutableArray<string> argumentNames = default(ImmutableArray<string>),
             ImmutableArray<RefKind> refKinds = default(ImmutableArray<RefKind>))
@@ -1145,7 +1145,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
 
         internal BoundQuotedDynamicArgument MakeDynamicArgumentExpression(
-            CSharpSyntaxNode syntax,
+            SyntaxNode syntax,
             BoundExpression boundArgument,
             string name,
             RefKind refKind)

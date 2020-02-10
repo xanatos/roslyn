@@ -81,7 +81,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             if (!field.HasValue)
             {
-                field = _compilation.GetTypeByMetadataName(type.GetMetadataName()) != null;
+                field = !(_compilation.GetTypeByMetadataName(type.GetMetadataName()) is null);
             }
 
             return field.Value;
@@ -234,9 +234,9 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             CheckForAssignmentToSelf(node);
 
-            if (_inExpressionLambda  && !HasCSharpExpression && node.Left.Kind != BoundKind.ObjectInitializerMember && node.Left.Kind != BoundKind.DynamicObjectInitializerMember)
+            if (_inExpressionLambda && !HasCSharpExpression && node.Left.Kind != BoundKind.ObjectInitializerMember && node.Left.Kind != BoundKind.DynamicObjectInitializerMember)
             {
-               Error(ErrorCode.ERR_ExpressionTreeContainsAssignment, node);
+                Error(ErrorCode.ERR_ExpressionTreeContainsAssignment, node);
             }
 
             return base.VisitAssignmentOperator(node);

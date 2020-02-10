@@ -6,6 +6,7 @@
 
 using System.Collections.Immutable;
 using System.Diagnostics;
+using Microsoft.CodeAnalysis.PooledObjects;
 using Microsoft.CodeAnalysis.CSharp.Symbols;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -51,7 +52,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 if (_inExpressionLambda)
                 {
                     var rewrittenDeclarations = VisitUsingDeclarations(node.DeclarationsOpt, node.IDisposableConversion);
-                    return node.Update(node.Locals, rewrittenDeclarations, null, Conversion.NoConversion, rewrittenBody);
+                    return node.Update(node.Locals, rewrittenDeclarations, null, Conversion.NoConversion, rewrittenBody, node.AwaitOpt, node.DisposeMethodOpt);
                 }
 
                 SyntaxToken awaitKeyword = node.Syntax.Kind() == SyntaxKind.UsingStatement ? ((UsingStatementSyntax)node.Syntax).AwaitKeyword : default;
@@ -140,7 +141,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // NB: In an expression tree, we suppress the optimization
                 if (_inExpressionLambda)
                 {
-                    return node.Update(node.Locals, null, rewrittenExpression, node.IDisposableConversion, tryBlock);
+                    return node.Update(node.Locals, null, rewrittenExpression, node.IDisposableConversion, tryBlock, node.AwaitOpt, node.DisposeMethodOpt);
                 }
 
                 Debug.Assert(node.Locals.IsEmpty); // TODO: This might not be a valid assumption in presence of semicolon operator.
@@ -188,7 +189,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 if (_inExpressionLambda)
                 {
-                    return node.Update(node.Locals, null, tempInit, Conversion.NoConversion, tryBlock);
+                    return node.Update(node.Locals, null, tempInit, Conversion.NoConversion, tryBlock, node.AwaitOpt, node.DisposeMethodOpt);
                 }
 
                 boundTemp = _factory.StoreToTemp(tempInit, out tempAssignment, kind: SynthesizedLocalKind.Using);
@@ -197,7 +198,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 if (_inExpressionLambda)
                 {
-                    return node.Update(node.Locals, null, rewrittenExpression, Conversion.NoConversion, tryBlock);
+                    return node.Update(node.Locals, null, rewrittenExpression, Conversion.NoConversion, tryBlock, node.AwaitOpt, node.DisposeMethodOpt);
                 }
 
                 // ResourceType temp = expr;
@@ -526,7 +527,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 if (decl.LocalSymbol.Type.IsDynamic())
                 {
-                    rewrittenInitializer = MakeConversion(
+                    rewrittenInitializer = MakeConversionNode(
                         decl.Syntax,
                         rewrittenInitializer,
                         idisposableConversion,
@@ -535,7 +536,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 }
 
                 // TODO: Check what the ArgumentsOpt are for.
-                var declRewritten = decl.Update(decl.LocalSymbol, decl.DeclaredType, rewrittenInitializer, VisitList(decl.ArgumentsOpt));
+                var declRewritten = decl.Update(decl.LocalSymbol, decl.DeclaredTypeOpt, rewrittenInitializer, VisitList(decl.ArgumentsOpt), decl.InferredType);
 
                 decls.Add(declRewritten);
             }
