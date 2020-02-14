@@ -770,7 +770,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         public override BoundNode VisitNullCoalescingAssignmentOperator(BoundNullCoalescingAssignmentOperator node)
         {
-            if (_inExpressionLambda)
+            if (_inExpressionLambda && !HasCSharpExpression)
             {
                 Error(ErrorCode.ERR_ExpressionTreeCantContainNullCoalescingAssignment, node);
             }
