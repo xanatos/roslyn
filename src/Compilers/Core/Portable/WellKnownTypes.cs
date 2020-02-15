@@ -321,6 +321,7 @@ namespace Microsoft.CodeAnalysis
         Microsoft_CSharp_Expressions_CSharpStatement,
         Microsoft_CSharp_Expressions_CSharpSwitchCase,
         Microsoft_CSharp_Expressions_ConditionalReceiver,
+        Microsoft_CSharp_Expressions_Interpolation,
 
         NextAvailable,
 
@@ -638,6 +639,7 @@ namespace Microsoft.CodeAnalysis
             "Microsoft.CSharp.Expressions.CSharpSwitchCase",
 
             "Microsoft.CSharp.Expressions.ConditionalReceiver",
+            "Microsoft.CSharp.Expressions.Interpolation",
         };
 
         private readonly static Dictionary<string, WellKnownType> s_nameToTypeIdMap = new Dictionary<string, WellKnownType>((int)Count);

@@ -120,9 +120,46 @@ namespace Microsoft.CodeAnalysis.CSharp
             format = _factory.StringLiteral(formatString.ToStringAndFree());
         }
 
+        private BoundNode VisitInterpolatedStringForExpressionTree(BoundInterpolatedString node)
+        {
+            var parts = node.Parts;
+            var n = parts.Length;
+            var expressions = ArrayBuilder<BoundExpression>.GetInstance(n);
+
+            for (int i = 0; i < n; i++)
+            {
+                var part = parts[i];
+
+                if (part is BoundStringInsert fillin)
+                {
+                    var value = fillin.Value;
+
+                    if (value.Type?.TypeKind == TypeKind.Dynamic)
+                    {
+                        value = MakeConversionNode(value, _compilation.ObjectType, @checked: false);
+                    }
+
+                    expressions.Add(fillin.Update(VisitExpression(value), fillin.Alignment, fillin.Format, fillin.Type));
+                }
+                else
+                {
+                    Debug.Assert(part is BoundLiteral && part.ConstantValue != null);
+
+                    expressions.Add(part);
+                }
+            }
+
+            return node.Update(expressions.ToImmutable(), node.Type);
+        }
+
         public override BoundNode VisitInterpolatedString(BoundInterpolatedString node)
         {
             Debug.Assert(node.Type is { SpecialType: SpecialType.System_String }); // if target-converted, we should not get here.
+
+            if (_inExpressionLambda && HasCSharpExpression)
+            {
+                return VisitInterpolatedStringForExpressionTree(node);
+            }
 
             BoundExpression? result;
 

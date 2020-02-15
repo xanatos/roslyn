@@ -14,6 +14,8 @@ namespace Microsoft.CodeAnalysis.CSharp
 {
     internal partial class ExpressionLambdaRewriter // this is like a bound tree rewriter, but only handles a small subset of node kinds
     {
+        private readonly TypeCompilationState _compilationState;
+        private readonly DiagnosticBag _diagnostics;
         private readonly SyntheticBoundNodeFactory _bound;
         private readonly TypeMap _typeMap;
         private readonly Dictionary<ParameterSymbol, BoundExpression> _parameterMap = new Dictionary<ParameterSymbol, BoundExpression>();
@@ -126,6 +128,19 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
+        private NamedTypeSymbol _CSharp_Expressions_InterpolationType;
+        private NamedTypeSymbol CSharp_Expressions_InterpolationType
+        {
+            get
+            {
+                if ((object)_CSharp_Expressions_InterpolationType == null)
+                {
+                    _CSharp_Expressions_InterpolationType = _bound.WellKnownType(WellKnownType.Microsoft_CSharp_Expressions_Interpolation);
+                }
+                return _CSharp_Expressions_InterpolationType;
+            }
+        }
+
         private NamedTypeSymbol _ParameterExpressionType;
         private NamedTypeSymbol ParameterExpressionType
         {
@@ -191,6 +206,8 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         private ExpressionLambdaRewriter(TypeCompilationState compilationState, TypeMap typeMap, SyntaxNode node, int recursionDepth, DiagnosticBag diagnostics)
         {
+            _compilationState = compilationState;
+            _diagnostics = diagnostics;
             _bound = new SyntheticBoundNodeFactory(null, compilationState.Type, node, compilationState, diagnostics);
             _ignoreAccessibility = compilationState.ModuleBuilderOpt.IgnoreAccessibility;
             _int32Type = _bound.SpecialType(SpecialType.System_Int32);
@@ -467,6 +484,9 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 case BoundKind.DiscardExpression:
                     return VisitDiscardExpression((BoundDiscardExpression)node);
+
+                case BoundKind.InterpolatedString:
+                    return VisitInterpolatedString((BoundInterpolatedString)node);
 
                 default:
                     throw ExceptionUtilities.UnexpectedValue(node.Kind);
@@ -1762,6 +1782,67 @@ namespace Microsoft.CodeAnalysis.CSharp
         private BoundExpression VisitDiscardExpression(BoundDiscardExpression node)
         {
             return CSharpStmtFactory("Discard", _bound.Typeof(node.Type));
+        }
+
+        private BoundExpression VisitInterpolatedString(BoundInterpolatedString node)
+        {
+            // TODO: Cache these.
+            var nullableInt32Type = _nullableType.Construct(_int32Type);
+
+            var parts = node.Parts;
+            var n = parts.Length;
+            var expressions = new BoundExpression[n];
+
+            for (int i = 0; i < n; i++)
+            {
+                var part = parts[i];
+
+                var fillin = part as BoundStringInsert;
+                if (fillin == null)
+                {
+                    Debug.Assert(part is BoundLiteral && part.ConstantValue != null);
+
+                    // this is one of the literal parts
+                    expressions[i] = CSharpExprFactory("InterpolationStringLiteral", _bound.StringLiteral(part.ConstantValue));
+                }
+                else
+                {
+                    // this is one of the expression holes
+
+                    BoundExpression alignment, format;
+
+                    if (fillin.Alignment != null && !fillin.Alignment.HasErrors)
+                    {
+                        if (!Binder.TryGetSpecialTypeMember<MethodSymbol>(_compilationState.Compilation, SpecialMember.System_Nullable_T__ctor, fillin.Alignment.Syntax, _diagnostics, out var ctor))
+                        {
+                            Debug.Assert(false);
+                        }
+
+                        alignment = _bound.New(ctor.AsMember(nullableInt32Type), _bound.Literal(fillin.Alignment.ConstantValue.Int32Value));
+                    }
+                    else
+                    {
+                        alignment = _bound.Default(nullableInt32Type);
+                    }
+
+                    if (fillin.Format != null && !fillin.Format.HasErrors)
+                    {
+                        format = _bound.StringLiteral(fillin.Format.ConstantValue.StringValue);
+                    }
+                    else
+                    {
+                        format = _bound.Null(fillin.Format.Type);
+                    }
+
+                    var value = Visit(fillin.Value);
+
+                    expressions[i] = CSharpExprFactory("InterpolationStringInsert", value, format, alignment);
+                }
+            }
+
+            var interpolations = _bound.ArrayOrEmpty(CSharp_Expressions_InterpolationType, expressions);
+
+            return CSharpExprFactory("InterpolatedString", interpolations);
         }
     }
 }
