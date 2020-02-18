@@ -183,6 +183,8 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         private readonly NamedTypeSymbol _int32Type;
 
+        private readonly NamedTypeSymbol _stringType;
+
         private readonly NamedTypeSymbol _objectType;
 
         private readonly NamedTypeSymbol _nullableType;
@@ -211,6 +213,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             _bound = new SyntheticBoundNodeFactory(null, compilationState.Type, node, compilationState, diagnostics);
             _ignoreAccessibility = compilationState.ModuleBuilderOpt.IgnoreAccessibility;
             _int32Type = _bound.SpecialType(SpecialType.System_Int32);
+            _stringType = _bound.SpecialType(SpecialType.System_String);
             _objectType = _bound.SpecialType(SpecialType.System_Object);
             _nullableType = _bound.SpecialType(SpecialType.System_Nullable_T);
             _IEnumerableType = _bound.SpecialType(SpecialType.System_Collections_Generic_IEnumerable_T);
@@ -1831,7 +1834,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     }
                     else
                     {
-                        format = _bound.Null(fillin.Format.Type);
+                        format = _bound.Null(_stringType);
                     }
 
                     var value = Visit(fillin.Value);
