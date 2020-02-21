@@ -1082,6 +1082,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                     }
                 case ConversionKind.NullLiteral:
                     return Convert(Constant(_bound.Null(_objectType)), _objectType, node.Type, false, node.ExplicitCastInCode);
+                case ConversionKind.InterpolatedString:
+                    return VisitInterpolatedString((BoundInterpolatedString)node.Operand, node.Type);
                 default:
                     return Convert(Visit(node.Operand), node.Operand.Type, node.Type, node.Checked, node.ExplicitCastInCode);
             }
@@ -1787,8 +1789,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             return CSharpStmtFactory("Discard", _bound.Typeof(node.Type));
         }
 
-        private BoundExpression VisitInterpolatedString(BoundInterpolatedString node)
+        private BoundExpression VisitInterpolatedString(BoundInterpolatedString node, TypeSymbol type = null)
         {
+            type ??= _stringType;
+
             // TODO: Cache these.
             var nullableInt32Type = _nullableType.Construct(_int32Type);
 
@@ -1845,7 +1849,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             var interpolations = _bound.ArrayOrEmpty(CSharp_Expressions_InterpolationType, expressions);
 
-            return CSharpExprFactory("InterpolatedString", interpolations);
+            return CSharpExprFactory("InterpolatedString", _bound.Typeof(type), interpolations);
         }
     }
 }

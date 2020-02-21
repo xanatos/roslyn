@@ -14,6 +14,12 @@ namespace Microsoft.CodeAnalysis.CSharp
         private BoundExpression RewriteInterpolatedStringConversion(BoundConversion conversion)
         {
             Debug.Assert(conversion.ConversionKind == ConversionKind.InterpolatedString);
+
+            if (_inExpressionLambda && HasCSharpExpression)
+            {
+                return conversion.UpdateOperand(VisitExpression(conversion.Operand));
+            }
+
             BoundExpression format;
             ArrayBuilder<BoundExpression> expressions;
             MakeInterpolatedStringFormat((BoundInterpolatedString)conversion.Operand, out format, out expressions);
