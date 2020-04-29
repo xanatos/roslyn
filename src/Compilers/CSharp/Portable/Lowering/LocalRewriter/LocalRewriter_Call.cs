@@ -564,7 +564,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 temps = temporariesBuilder.AsImmutable();
 
-                var paramsExpression = default(BoundExpression);
+                BoundExpression? paramsExpression = null;
 
                 var hasMissingParameters = false;
 
@@ -973,7 +973,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             ImmutableArray<int> argsToParamsOpt,
             ImmutableArray<BoundExpression> rewrittenArguments,
             ImmutableArray<ParameterSymbol> parameters,
-            BoundExpression tempStoreArgument)
+            BoundExpression? tempStoreArgument)
         {
             ArrayBuilder<BoundExpression> paramArray = ArrayBuilder<BoundExpression>.GetInstance();
             int paramsParam = parameters.Length - 1;

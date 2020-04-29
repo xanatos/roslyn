@@ -418,7 +418,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             ImmutableArray<BoundExpression> newArguments,
             ImmutableArray<RefKind> newRefKinds,
             BoundObjectInitializerExpressionBase? newInitializerExpression,
-            TypeSymbol changeTypeOpt = null,
+            TypeSymbol? changeTypeOpt = null,
             bool keepArgInfo = false)
         {
             return Update(

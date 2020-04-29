@@ -332,8 +332,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             bool hasImplicitReceiver,
             bool resultDiscarded)
         {
+            Debug.Assert(_factory.TopLevelMethod is { });
+
             CSharpBinderFlags binderFlags = 0;
-            if (hasImplicitReceiver && !_factory.TopLevelMethod.IsStatic)
+            if (hasImplicitReceiver && _factory.TopLevelMethod.RequiresInstanceReceiver)
             {
                 binderFlags |= CSharpBinderFlags.InvokeSimpleName;
             }
@@ -350,7 +352,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
 
             RefKind receiverRefKind;
-            BoundExpression receiverStaticType;
+            BoundExpression? receiverStaticType;
             if (loweredReceiver.Kind == BoundKind.TypeExpression)
             {
                 receiverStaticType = _factory.Typeof(((BoundTypeExpression)loweredReceiver).Type);
@@ -865,7 +867,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             ImmutableArray<string> argumentNames = default(ImmutableArray<string>),
             ImmutableArray<RefKind> refKinds = default(ImmutableArray<RefKind>))
         {
-            const string NoName = null;
+            const string? NoName = null;
 
             var res = ArrayBuilder<BoundQuotedDynamicArgument>.GetInstance();
 
@@ -1147,7 +1149,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         internal BoundQuotedDynamicArgument MakeDynamicArgumentExpression(
             SyntaxNode syntax,
             BoundExpression boundArgument,
-            string name,
+            string? name,
             RefKind refKind)
         {
             CSharpArgumentInfoFlags flags = 0;
@@ -1178,7 +1180,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             // Check compile time type.
             // See also DynamicRewriter::GenerateCallingObjectFlags.
-            if ((object)argType != null && !argType.IsDynamic())
+            if (argType is { } && !argType.IsDynamic())
             {
                 flags |= CSharpArgumentInfoFlags.UseCompileTimeType;
             }

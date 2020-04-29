@@ -162,7 +162,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                     return oldNodeOpt != null ?
                         oldNodeOpt.Update(rewrittenReceiver, indexer, rewrittenArguments, argumentNamesOpt, argumentRefKindsOpt, expanded, argsToParamsOpt, oldNodeOpt.BinderOpt, oldNodeOpt.UseSetterForDefaultArgumentGeneration, type) :
-                        new BoundIndexerAccess(syntax, rewrittenReceiver, indexer, rewrittenArguments, argumentNamesOpt, argumentRefKindsOpt, expanded, argsToParamsOpt, oldNodeOpt.BinderOpt, oldNodeOpt.UseSetterForDefaultArgumentGeneration, type);
+                        new BoundIndexerAccess(syntax, rewrittenReceiver, indexer, rewrittenArguments, argumentNamesOpt, argumentRefKindsOpt, expanded, argsToParamsOpt, null, isLeftOfAssignment, type);
                 }
 
                 BoundExpression call = MakePropertyGetAccess(syntax, rewrittenReceiver, indexer, rewrittenArguments, getMethod);
