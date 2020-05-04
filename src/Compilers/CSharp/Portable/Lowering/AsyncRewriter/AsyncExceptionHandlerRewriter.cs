@@ -208,7 +208,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             if (_F.CurrentFunction.IsAsync && _F.CurrentFunction.IsIterator)
             {
                 // We wrap this block so that it can be processed as a finally block by async-iterator rewriting
-                syntheticFinally = _F.ExtractedFinallyBlock(syntheticFinallyBlock);
+                syntheticFinally = _F.ExtractedFinallyBlock(node.TryBlock, syntheticFinallyBlock);
             }
 
             var locals = ArrayBuilder<LocalSymbol>.GetInstance();

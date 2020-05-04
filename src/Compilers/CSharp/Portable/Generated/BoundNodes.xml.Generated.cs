@@ -715,25 +715,29 @@ namespace Microsoft.CodeAnalysis.CSharp
 
     internal sealed partial class BoundExtractedFinallyBlock : BoundStatement
     {
-        public BoundExtractedFinallyBlock(SyntaxNode syntax, BoundBlock finallyBlock, bool hasErrors = false)
-            : base(BoundKind.ExtractedFinallyBlock, syntax, hasErrors || finallyBlock.HasErrors())
+        public BoundExtractedFinallyBlock(SyntaxNode syntax, BoundBlock tryBlock, BoundBlock finallyBlock, bool hasErrors = false)
+            : base(BoundKind.ExtractedFinallyBlock, syntax, hasErrors || tryBlock.HasErrors() || finallyBlock.HasErrors())
         {
 
+            RoslynDebug.Assert(tryBlock is object, "Field 'tryBlock' cannot be null (make the type nullable in BoundNodes.xml to remove this check)");
             RoslynDebug.Assert(finallyBlock is object, "Field 'finallyBlock' cannot be null (make the type nullable in BoundNodes.xml to remove this check)");
 
+            this.TryBlock = tryBlock;
             this.FinallyBlock = finallyBlock;
         }
 
+
+        public BoundBlock TryBlock { get; }
 
         public BoundBlock FinallyBlock { get; }
         [DebuggerStepThrough]
         public override BoundNode? Accept(BoundTreeVisitor visitor) => visitor.VisitExtractedFinallyBlock(this);
 
-        public BoundExtractedFinallyBlock Update(BoundBlock finallyBlock)
+        public BoundExtractedFinallyBlock Update(BoundBlock tryBlock, BoundBlock finallyBlock)
         {
-            if (finallyBlock != this.FinallyBlock)
+            if (tryBlock != this.TryBlock || finallyBlock != this.FinallyBlock)
             {
-                var result = new BoundExtractedFinallyBlock(this.Syntax, finallyBlock, this.HasErrors);
+                var result = new BoundExtractedFinallyBlock(this.Syntax, tryBlock, finallyBlock, this.HasErrors);
                 result.CopyAttributes(this);
                 return result;
             }
@@ -9505,8 +9509,9 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
         public override BoundNode? VisitExtractedFinallyBlock(BoundExtractedFinallyBlock node)
         {
+            BoundBlock tryBlock = (BoundBlock)this.Visit(node.TryBlock);
             BoundBlock finallyBlock = (BoundBlock)this.Visit(node.FinallyBlock);
-            return node.Update(finallyBlock);
+            return node.Update(tryBlock, finallyBlock);
         }
         public override BoundNode? VisitTypeExpression(BoundTypeExpression node)
         {

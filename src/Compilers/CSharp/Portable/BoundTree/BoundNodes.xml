@@ -165,6 +165,7 @@
   <!-- This node is used to wrap the BoundBlock for a finally extracted by AsyncExceptionHandlerRewriter.
     It is processed and removed by AsyncIteratorRewriter. -->
   <Node Name="BoundExtractedFinallyBlock" Base="BoundStatement">
+    <Field Name="TryBlock" Type="BoundBlock"/>
     <Field Name="FinallyBlock" Type="BoundBlock"/>
   </Node>
 

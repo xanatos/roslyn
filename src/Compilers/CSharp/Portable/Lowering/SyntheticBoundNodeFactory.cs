@@ -460,9 +460,9 @@ namespace Microsoft.CodeAnalysis.CSharp
             return new BoundBlock(Syntax, locals, localFunctions, statements) { WasCompilerGenerated = true };
         }
 
-        public BoundExtractedFinallyBlock ExtractedFinallyBlock(BoundBlock finallyBlock)
+        public BoundExtractedFinallyBlock ExtractedFinallyBlock(BoundBlock tryBlock, BoundBlock finallyBlock)
         {
-            return new BoundExtractedFinallyBlock(Syntax, finallyBlock) { WasCompilerGenerated = true };
+            return new BoundExtractedFinallyBlock(Syntax, tryBlock, finallyBlock) { WasCompilerGenerated = true };
         }
 
         public BoundStatementList StatementList()

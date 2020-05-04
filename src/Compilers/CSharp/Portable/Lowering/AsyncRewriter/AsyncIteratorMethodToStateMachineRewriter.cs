@@ -5,6 +5,7 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Reflection.Metadata.Ecma335;
 using Microsoft.CodeAnalysis.CodeGen;
 using Microsoft.CodeAnalysis.CSharp.Symbols;
 using Microsoft.CodeAnalysis.PooledObjects;
@@ -30,6 +31,8 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// </summary>
         private LabelSymbol _enclosingFinallyEntryOrFinallyExitOrExitLabel;
         private ArrayBuilder<LabelSymbol> _previousDisposalLabels;
+
+        private YieldReturnInTryAnalysis _analysis;
 
         /// <summary>
         /// We use _exprReturnLabel for normal end of method (ie. no more values) and `yield break;`.
@@ -193,6 +196,9 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// </summary>
         protected override BoundStatement VisitBody(BoundStatement body)
         {
+            Debug.Assert(_analysis == null);
+            _analysis = new YieldReturnInTryAnalysis(body);
+
             // Produce:
             //  initialStateResumeLabel:
             //  if (disposeMode) goto _exprReturnLabel;
@@ -306,8 +312,12 @@ namespace Microsoft.CodeAnalysis.CSharp
             var finallyExit = F.GenerateLabel("finallyExit");
             _previousDisposalLabels.Push(finallyExit);
 
+            bool tryContainsYieldReturn = false;
+
             if (node.FinallyBlockOpt != null)
             {
+                tryContainsYieldReturn = _analysis.TryContainsYieldReturn(node);
+
                 var finallyEntry = F.GenerateLabel("finallyEntry");
                 _enclosingFinallyEntryOrFinallyExitOrExitLabel = finallyEntry;
 
@@ -341,7 +351,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             // When exiting the try statement, we restore the previous disposal label.
             _enclosingFinallyEntryOrFinallyExitOrExitLabel = _previousDisposalLabels.Pop();
 
-            if (node.FinallyBlockOpt != null)
+            if (node.FinallyBlockOpt != null && tryContainsYieldReturn)
             {
                 // Append:
                 //  if (disposeMode) /* jump to parent's finally or exit */
@@ -367,9 +377,99 @@ namespace Microsoft.CodeAnalysis.CSharp
             // Remove the wrapping and append:
             //  if (disposeMode) goto enclosingFinallyOrExitLabel;
 
-            return AppendJumpToCurrentFinallyOrExit((BoundStatement)VisitBlock(extractedFinally.FinallyBlock));
+            if (!_analysis.TryContainsYieldReturn(extractedFinally))
+            {
+                return AppendJumpToCurrentFinallyOrExit((BoundStatement)VisitBlock(extractedFinally.FinallyBlock));
+            }
+
+            return extractedFinally.FinallyBlock;
         }
 
         #endregion Visitors
+
+        private sealed class YieldReturnInTryAnalysis : BoundTreeWalkerWithStackGuardWithoutRecursionOnTheLeftOfBinaryOperator
+        {
+            private HashSet<BoundNode> _interestingTry;
+
+            private bool _seenYieldReturn;
+
+            public YieldReturnInTryAnalysis(BoundStatement body)
+            {
+                _seenYieldReturn = false;
+                this.Visit(body);
+            }
+
+            public bool TryContainsYieldReturn(BoundNode statement)
+            {
+                return _interestingTry?.Contains(statement) ?? false;
+            }
+
+            public override BoundNode VisitTryStatement(BoundTryStatement node)
+            {
+                var origSeenYieldReturn = _seenYieldReturn;
+                _seenYieldReturn = false;
+                Visit(node.TryBlock);
+
+                if (_seenYieldReturn)
+                {
+                    _interestingTry ??= new HashSet<BoundNode>();
+                    _interestingTry.Add(node);
+                }
+
+                _seenYieldReturn |= origSeenYieldReturn;
+
+                VisitList(node.CatchBlocks);
+                Visit(node.FinallyBlockOpt);
+
+                return null;
+            }
+
+            public override BoundNode VisitExtractedFinallyBlock(BoundExtractedFinallyBlock node)
+            {
+                var origSeenYieldReturn = _seenYieldReturn;
+                _seenYieldReturn = false;
+                Visit(node.TryBlock);
+
+                if (_seenYieldReturn)
+                {
+                    _interestingTry ??= new HashSet<BoundNode>();
+                    _interestingTry.Add(node);
+                }
+
+                _seenYieldReturn |= origSeenYieldReturn;
+
+                return null;
+            }
+
+            public override BoundNode VisitYieldReturnStatement(BoundYieldReturnStatement node)
+            {
+                _seenYieldReturn = true;
+                return base.VisitYieldReturnStatement(node);
+            }
+
+            public override BoundNode VisitLambda(BoundLambda node)
+            {
+                var origSeenYieldReturn = _seenYieldReturn;
+                _seenYieldReturn = false;
+
+                base.VisitLambda(node);
+
+                _seenYieldReturn = origSeenYieldReturn;
+
+                return null;
+            }
+
+            public override BoundNode VisitLocalFunctionStatement(BoundLocalFunctionStatement node)
+            {
+                var origSeenYieldReturn = _seenYieldReturn;
+                _seenYieldReturn = false;
+
+                base.VisitLocalFunctionStatement(node);
+
+                _seenYieldReturn = origSeenYieldReturn;
+
+                return null;
+            }
+        }
     }
 }
