@@ -73,6 +73,14 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
+        internal bool InExpressionTree
+        {
+            get
+            {
+                return this.Flags.Includes(BinderFlags.InExpressionTree);
+            }
+        }
+
         // Return the nearest enclosing node being bound as a nameof(...) argument, if any, or null if none.
         protected virtual SyntaxNode? EnclosingNameofArgument => null;
 

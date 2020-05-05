@@ -4116,7 +4116,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 diagnostics.Add(node, useSiteDiagnostics);
                 // Attempting to make the conversion caches the diagnostics and the bound state inside
                 // the unbound lambda. Fetch the result from the cache.
-                BoundLambda boundLambda = unboundLambda.Bind(type);
+                BoundLambda boundLambda = unboundLambda.Bind(type, expressionTree: false);
 
                 if (!conversion.IsImplicit || !conversion.IsValid)
                 {
@@ -7212,22 +7212,28 @@ namespace Microsoft.CodeAnalysis.CSharp
                     result = TryImplicitConversionToArrayIndex(index, WellKnownType.System_Range, node, diagnostics);
                     if (result is object)
                     {
-                        // This member is needed for lowering and should produce an error if not present
-                        _ = GetWellKnownTypeMember(
-                            Compilation,
-                            WellKnownMember.System_Runtime_CompilerServices_RuntimeHelpers__GetSubArray_T,
-                            diagnostics,
-                            syntax: node);
+                        if (!InExpressionTree)
+                        {
+                            // This member is needed for lowering and should produce an error if not present
+                            _ = GetWellKnownTypeMember(
+                                Compilation,
+                                WellKnownMember.System_Runtime_CompilerServices_RuntimeHelpers__GetSubArray_T,
+                                diagnostics,
+                                syntax: node);
+                        }
                     }
                 }
                 else
                 {
-                    // This member is needed for lowering and should produce an error if not present
-                    _ = GetWellKnownTypeMember(
-                        Compilation,
-                        WellKnownMember.System_Index__GetOffset,
-                        diagnostics,
-                        syntax: node);
+                    if (!InExpressionTree)
+                    {
+                        // This member is needed for lowering and should produce an error if not present
+                        _ = GetWellKnownTypeMember(
+                            Compilation,
+                            WellKnownMember.System_Index__GetOffset,
+                            diagnostics,
+                            syntax: node);
+                    }
                 }
             }
 

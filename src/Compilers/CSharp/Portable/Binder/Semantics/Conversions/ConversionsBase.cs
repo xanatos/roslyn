@@ -1204,7 +1204,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 IsConstantNumericZero(sourceConstantValue);
         }
 
-        private static LambdaConversionResult IsAnonymousFunctionCompatibleWithDelegate(UnboundLambda anonymousFunction, TypeSymbol type)
+        private static LambdaConversionResult IsAnonymousFunctionCompatibleWithDelegate(UnboundLambda anonymousFunction, TypeSymbol type, bool expressionTree)
         {
             Debug.Assert((object)anonymousFunction != null);
             Debug.Assert((object)type != null);
@@ -1304,7 +1304,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
 
             // Ensure the body can be converted to that delegate type
-            var bound = anonymousFunction.Bind(delegateType);
+            var bound = anonymousFunction.Bind(delegateType, expressionTree);
             if (ErrorFacts.PreventsSuccessfulDelegateConversion(bound.Diagnostics))
             {
                 return LambdaConversionResult.BindingFailed;
@@ -1341,7 +1341,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return LambdaConversionResult.ExpressionTreeFromAnonymousMethod;
             }
 
-            return IsAnonymousFunctionCompatibleWithDelegate(anonymousFunction, delegateType);
+            return IsAnonymousFunctionCompatibleWithDelegate(anonymousFunction, delegateType, expressionTree: true);
         }
 
         public static LambdaConversionResult IsAnonymousFunctionCompatibleWithType(UnboundLambda anonymousFunction, TypeSymbol type)
@@ -1351,7 +1351,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             if (type.IsDelegateType())
             {
-                return IsAnonymousFunctionCompatibleWithDelegate(anonymousFunction, type);
+                return IsAnonymousFunctionCompatibleWithDelegate(anonymousFunction, type, expressionTree: false);
             }
             else if (type.IsExpressionTree())
             {

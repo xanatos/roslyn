@@ -1347,7 +1347,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                                 if (parameterType?.Kind == SymbolKind.NamedType &&
                                     (object)parameterType.GetDelegateType() != null)
                                 {
-                                    var discarded = unboundArgument.Bind((NamedTypeSymbol)parameterType);
+                                    var discarded = unboundArgument.Bind((NamedTypeSymbol)parameterType, expressionTree: false);
                                 }
                             }
 

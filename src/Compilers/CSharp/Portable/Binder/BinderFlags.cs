@@ -10,7 +10,7 @@ namespace Microsoft.CodeAnalysis.CSharp
     /// A specific location for binding.
     /// </summary>
     [Flags]
-    internal enum BinderFlags : uint
+    internal enum BinderFlags : ulong
     {
         None, // No specific location
         SuppressConstraintChecks = 1 << 0,
@@ -109,6 +109,11 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// Are we binding for the purpose of an Expression Evaluator
         /// </summary>
         InEEMethodBinder = 1 << 30,
+
+        /// <summary>
+        /// Binding in the context of an expression tree.
+        /// </summary>
+        InExpressionTree = 1UL << 31,
 
         // Groups
 

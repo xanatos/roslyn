@@ -7,6 +7,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using Microsoft.CodeAnalysis.CSharp.Symbols;
@@ -371,8 +372,8 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         public MessageID MessageID { get { return Data.MessageID; } }
 
-        public BoundLambda Bind(NamedTypeSymbol delegateType)
-            => SuppressIfNeeded(Data.Bind(delegateType));
+        public BoundLambda Bind(NamedTypeSymbol delegateType, bool expressionTree)
+            => SuppressIfNeeded(Data.Bind(delegateType, expressionTree));
 
         public BoundLambda BindForErrorRecovery()
             => SuppressIfNeeded(Data.BindForErrorRecovery());
@@ -400,6 +401,22 @@ namespace Microsoft.CodeAnalysis.CSharp
         public bool ParameterIsDiscard(int index) { return Data.ParameterIsDiscard(index); }
     }
 
+    internal sealed class UnboundLambdaBindingKeyEqualityComparer : IEqualityComparer<(bool expressionTree, NamedTypeSymbol delegateType)>
+    {
+        public bool Equals([AllowNull] (bool expressionTree, NamedTypeSymbol delegateType) x, [AllowNull] (bool expressionTree, NamedTypeSymbol delegateType) y)
+        {
+            return x.expressionTree == y.expressionTree && Symbols.SymbolEqualityComparer.ConsiderEverything.Equals(x.delegateType, y.delegateType);
+        }
+
+        public int GetHashCode([DisallowNull] (bool expressionTree, NamedTypeSymbol delegateType) obj)
+        {
+            // NB: Ignoring expressionTree for now; Equals will catch it. We're most likely only getting a single binding target, either an expression or a delegate type,
+            //     but not both. (Review this assumption.)
+
+            return Symbols.SymbolEqualityComparer.ConsiderEverything.GetHashCode(obj.delegateType);
+        }
+    }
+
     internal abstract class UnboundLambdaState
     {
         private UnboundLambda _unboundLambda; // we would prefer this readonly, but we have an initialization cycle.
@@ -408,7 +425,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         [PerformanceSensitive(
             "https://github.com/dotnet/roslyn/issues/23582",
             Constraint = "Avoid " + nameof(ConcurrentDictionary<NamedTypeSymbol, BoundLambda>) + " which has a large default size, but this cache is normally small.")]
-        private ImmutableDictionary<NamedTypeSymbol, BoundLambda> _bindingCache;
+        private ImmutableDictionary<(bool expressionTree, NamedTypeSymbol delegateType), BoundLambda> _bindingCache;
 
         [PerformanceSensitive(
             "https://github.com/dotnet/roslyn/issues/23582",
@@ -423,7 +440,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             if (includeCache)
             {
-                _bindingCache = ImmutableDictionary<NamedTypeSymbol, BoundLambda>.Empty.WithComparers(Symbols.SymbolEqualityComparer.ConsiderEverything);
+                _bindingCache = ImmutableDictionary<(bool expressionTree, NamedTypeSymbol delegateType), BoundLambda>.Empty.WithComparers(new UnboundLambdaBindingKeyEqualityComparer());
                 _returnInferenceCache = ImmutableDictionary<ReturnInferenceCacheKey, BoundLambda>.Empty;
             }
 
@@ -486,13 +503,18 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
 
         // Returns the inferred return type, or null if none can be inferred.
-        public BoundLambda Bind(NamedTypeSymbol delegateType)
+        public BoundLambda Bind(NamedTypeSymbol delegateType, bool expressionTree)
         {
+            // REVIEW: Is passing down `expressionTree` the right strategy? It brings caching complexity. Alternatively, we could
+            //         make binding independent of this (it's only used to conditionally raise errors, e.g. on existence of members
+            //         such as GetSubArray), or flow the original type (delegate or expression tree type) down here and use that as
+            //         the caching key.
+
             BoundLambda result;
-            if (!_bindingCache.TryGetValue(delegateType, out result))
+            if (!_bindingCache.TryGetValue((expressionTree, delegateType), out result))
             {
-                result = ReallyBind(delegateType);
-                result = ImmutableInterlocked.GetOrAdd(ref _bindingCache, delegateType, result);
+                result = ReallyBind(delegateType, expressionTree);
+                result = ImmutableInterlocked.GetOrAdd(ref _bindingCache, (expressionTree, delegateType), result);
             }
 
             return result;
@@ -552,7 +574,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             return true;
         }
 
-        private BoundLambda ReallyBind(NamedTypeSymbol delegateType)
+        private BoundLambda ReallyBind(NamedTypeSymbol delegateType, bool expressionTree)
         {
             var invokeMethod = DelegateInvokeMethod(delegateType);
             var returnType = DelegateReturnTypeWithAnnotations(invokeMethod, out RefKind refKind);
@@ -584,7 +606,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             else
             {
                 lambdaSymbol = CreateLambdaSymbol(Binder.ContainingMemberOrLambda, returnType, diagnostics, cacheKey.ParameterTypes, cacheKey.ParameterRefKinds, refKind);
-                lambdaBodyBinder = new ExecutableCodeBinder(_unboundLambda.Syntax, lambdaSymbol, ParameterBinder(lambdaSymbol, Binder));
+                lambdaBodyBinder = new ExecutableCodeBinder(_unboundLambda.Syntax, lambdaSymbol, ParameterBinder(lambdaSymbol, Binder), inExpressionTree: expressionTree);
                 block = BindLambdaBody(lambdaSymbol, lambdaBodyBinder, diagnostics);
             }
 
@@ -711,7 +733,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             ImmutableArray<TypeWithAnnotations> parameterTypes,
             ImmutableArray<RefKind> parameterRefKinds)
         {
-            (var lambdaSymbol, var block, var lambdaBodyBinder, var diagnostics) = BindWithParameterAndReturnType(parameterTypes, parameterRefKinds, returnType: default);
+            (var lambdaSymbol, var block, var lambdaBodyBinder, var diagnostics) = BindWithParameterAndReturnType(expressionTree: false, parameterTypes, parameterRefKinds, returnType: default);
             var returnTypes = ArrayBuilder<(BoundReturnStatement, TypeWithAnnotations)>.GetInstance();
             BoundLambda.BlockReturns.GetReturnTypes(returnTypes, block);
             var inferredReturnType = BoundLambda.InferReturnType(returnTypes, _unboundLambda, lambdaBodyBinder.Compilation, lambdaBodyBinder.Conversions, delegateType, lambdaSymbol.IsAsync);
@@ -743,13 +765,15 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         private (LambdaSymbol lambdaSymbol, BoundBlock block, ExecutableCodeBinder lambdaBodyBinder, DiagnosticBag diagnostics) BindWithDelegateAndReturnType(
             NamedTypeSymbol delegateType,
+            bool expressionTree,
             TypeWithAnnotations returnType)
         {
             var cacheKey = ReturnInferenceCacheKey.Create(delegateType, IsAsync);
-            return BindWithParameterAndReturnType(cacheKey.ParameterTypes, cacheKey.ParameterRefKinds, returnType);
+            return BindWithParameterAndReturnType(expressionTree, cacheKey.ParameterTypes, cacheKey.ParameterRefKinds, returnType);
         }
 
         private (LambdaSymbol lambdaSymbol, BoundBlock block, ExecutableCodeBinder lambdaBodyBinder, DiagnosticBag diagnostics) BindWithParameterAndReturnType(
+            bool expressionTree,
             ImmutableArray<TypeWithAnnotations> parameterTypes,
             ImmutableArray<RefKind> parameterRefKinds,
             TypeWithAnnotations returnType)
@@ -960,7 +984,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     }
                 }
 
-                (var lambdaSymbol, var block, var lambdaBodyBinder, var diagnostics) = BindWithDelegateAndReturnType(delegateType, returnType);
+                (var lambdaSymbol, var block, var lambdaBodyBinder, var diagnostics) = BindWithDelegateAndReturnType(delegateType, expressionTree: false, returnType);
                 return new BoundLambda(
                     _unboundLambda.Syntax,
                     _unboundLambda,
