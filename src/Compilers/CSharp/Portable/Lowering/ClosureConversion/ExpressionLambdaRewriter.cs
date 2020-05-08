@@ -369,6 +369,13 @@ namespace Microsoft.CodeAnalysis.CSharp
             _bound.Syntax = node.Syntax;
             var result = VisitInternal(node);
             _bound.Syntax = old;
+
+            if (result.HasAnyErrors)
+            {
+                // Handle the case where a factory method is missing.
+                return result;
+            }
+
             return _bound.Convert(ExpressionType, result);
         }
 
@@ -495,6 +502,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return VisitFromEndIndex((BoundFromEndIndexExpression)node);
                 case BoundKind.RangeExpression:
                     return VisitRange((BoundRangeExpression)node);
+
+                case BoundKind.IndexOrRangePatternIndexerAccess:
+                    return VisitIndexOrRangePatternIndexerAccess((BoundIndexOrRangePatternIndexerAccess)node);
 
                 default:
                     throw ExceptionUtilities.UnexpectedValue(node.Kind);
@@ -1930,6 +1940,30 @@ namespace Microsoft.CodeAnalysis.CSharp
         private BoundExpression VisitRange(BoundRangeExpression node)
         {
             return CSharpExprFactory("Range", Visit(node.LeftOperandOpt) ?? _bound.Null(ExpressionType), Visit(node.RightOperandOpt) ?? _bound.Null(ExpressionType), _bound.MethodInfo(node.MethodOpt, useMethodBase: true), _bound.Typeof(node.Type));
+        }
+
+        private BoundExpression VisitIndexOrRangePatternIndexerAccess(BoundIndexOrRangePatternIndexerAccess node)
+        {
+            MethodSymbol GetAccessor(PropertySymbol p)
+            {
+                return p.GetOwnOrInheritedGetMethod() ?? p.GetOwnOrInheritedSetMethod();
+            }
+
+            var countProperty = node.LengthOrCountProperty;
+            var countAccessor = GetAccessor(countProperty);
+
+            var receiver = Visit(node.Receiver);
+            var argument = Visit(node.Argument);
+            var lengthOrCount = _bound.MethodInfo(countAccessor);
+
+            var indexer = node.PatternSymbol switch
+            {
+                PropertySymbol p => GetAccessor(p),
+                MethodSymbol m => m,
+                _ => throw ExceptionUtilities.UnexpectedValue(node.PatternSymbol)
+            };
+
+            return CSharpExprFactory("IndexerAccess", receiver, argument, lengthOrCount, _bound.MethodInfo(indexer));
         }
     }
 }

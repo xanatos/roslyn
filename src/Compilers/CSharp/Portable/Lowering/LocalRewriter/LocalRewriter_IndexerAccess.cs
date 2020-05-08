@@ -185,6 +185,11 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         public override BoundNode VisitIndexOrRangePatternIndexerAccess(BoundIndexOrRangePatternIndexerAccess node)
         {
+            if (_inExpressionLambda)
+            {
+                return node.Update(VisitExpression(node.Receiver), node.LengthOrCountProperty, node.PatternSymbol, VisitExpression(node.Argument), node.Type);
+            }
+
             return VisitIndexOrRangePatternIndexerAccess(node, isLeftOfAssignment: false);
         }
 
