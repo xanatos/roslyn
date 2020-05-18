@@ -375,13 +375,17 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 case ConversionKind.ImplicitTuple:
                 case ConversionKind.ExplicitTuple:
-                    return RewriteTupleConversion(
-                        syntax: syntax,
-                        rewrittenOperand: rewrittenOperand,
-                        conversion: conversion,
-                        @checked: @checked,
-                        explicitCastInCode: explicitCastInCode,
-                        rewrittenType: (NamedTypeSymbol)rewrittenType);
+                    if (!_inExpressionLambda)
+                    {
+                        return RewriteTupleConversion(
+                            syntax: syntax,
+                            rewrittenOperand: rewrittenOperand,
+                            conversion: conversion,
+                            @checked: @checked,
+                            explicitCastInCode: explicitCastInCode,
+                            rewrittenType: (NamedTypeSymbol)rewrittenType);
+                    }
+                    break;
 
                 case ConversionKind.MethodGroup:
                     {

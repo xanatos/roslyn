@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Linq;
 using Microsoft.CodeAnalysis.CSharp.Symbols;
 using Microsoft.CodeAnalysis.PooledObjects;
 using Roslyn.Utilities;
@@ -49,6 +50,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return _ExpressionTypeType;
             }
         }
+
+        private NamedTypeSymbol _LambdaExpressionType;
+        private NamedTypeSymbol LambdaExpressionTypeType => _LambdaExpressionType ??= _bound.WellKnownType(WellKnownType.System_Linq_Expressions_LambdaExpression);
 
         private NamedTypeSymbol _CSharpExpressionType;
         private NamedTypeSymbol CSharpExpressionType
@@ -505,6 +509,13 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 case BoundKind.IndexOrRangePatternIndexerAccess:
                     return VisitIndexOrRangePatternIndexerAccess((BoundIndexOrRangePatternIndexerAccess)node);
+
+                case BoundKind.TupleLiteral:
+                    return VisitTupleLiteral((BoundTupleLiteral)node);
+                case BoundKind.ConvertedTupleLiteral:
+                    return VisitConvertedTupleLiteral((BoundConvertedTupleLiteral)node);
+                case BoundKind.TupleBinaryOperator:
+                    return VisitTupleBinaryOperator((BoundTupleBinaryOperator)node);
 
                 default:
                     throw ExceptionUtilities.UnexpectedValue(node.Kind);
@@ -1140,6 +1151,11 @@ namespace Microsoft.CodeAnalysis.CSharp
                         var operand = Visit(node.Operand);
                         return node.ExplicitCastInCode ? Convert(operand, node.Type, false) : operand;
                     }
+                case ConversionKind.ImplicitTuple:
+                case ConversionKind.ExplicitTuple:
+                case ConversionKind.ImplicitNullable when IsLiftedTupleConversion(node):
+                case ConversionKind.ExplicitNullable when IsLiftedTupleConversion(node):
+                    return TupleConvert(node);
                 case ConversionKind.ImplicitNullable:
                     if (node.Operand.Type.IsNullableType())
                     {
@@ -1157,9 +1173,70 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return Convert(Constant(_bound.Null(_objectType)), _objectType, node.Type, false, node.ExplicitCastInCode);
                 case ConversionKind.InterpolatedString:
                     return VisitInterpolatedString((BoundInterpolatedString)node.Operand, node.Type);
+                case ConversionKind.ImplicitTupleLiteral:
+                case ConversionKind.ExplicitTupleLiteral:
+                    throw ExceptionUtilities.UnexpectedValue(node.ConversionKind); // REVIEW: LocalRewriter turns this into identity. Should we preserve it in expession trees?
                 default:
                     return Convert(Visit(node.Operand), node.Operand.Type, node.Type, node.Checked, node.ExplicitCastInCode);
             }
+        }
+
+        private static bool IsLiftedTupleConversion(BoundConversion node)
+        {
+            var fromType = node.Operand.Type;
+            var toType = node.Type;
+
+            // T -> T
+            if (TypeSymbol.Equals(fromType, toType, TypeCompareKind.ConsiderEverything2))
+            {
+                return false;
+            }
+
+            if (fromType.IsNullableType())
+            {
+                var fromTypeNonNull = fromType.GetNullableUnderlyingType();
+
+                if (!fromTypeNonNull.IsTupleType)
+                {
+                    return false;
+                }
+
+                // (T, U)? -> (T', U')
+                if (TypeSymbol.Equals(fromTypeNonNull, toType, TypeCompareKind.ConsiderEverything2))
+                {
+                    return false;
+                }
+            }
+            else if (!fromType.IsTupleType)
+            {
+                return false;
+            }
+
+            if (toType.IsNullableType())
+            {
+                var toTypeNonNull = toType.GetNullableUnderlyingType();
+
+                if (!toTypeNonNull.IsTupleType)
+                {
+                    return false;
+                }
+
+                // (T, U) -> (T', U')?
+                if (TypeSymbol.Equals(fromType, toTypeNonNull, TypeCompareKind.ConsiderEverything2))
+                {
+                    return false;
+                }
+            }
+            else if (!toType.IsTupleType)
+            {
+                return false;
+            }
+
+            // (T, U) -> (T', U')
+            // (T, U) -> (T', U')?
+            // (T, U)? -> (T', U')
+            // (T, U)? -> (T', U')?
+            return true;
         }
 
         private BoundExpression Convert(BoundExpression operand, TypeSymbol oldType, TypeSymbol newType, bool isChecked, bool isExplicit)
@@ -1170,6 +1247,75 @@ namespace Microsoft.CodeAnalysis.CSharp
         private BoundExpression Convert(BoundExpression expr, TypeSymbol type, bool isChecked)
         {
             return ExprFactory(isChecked ? "ConvertChecked" : "Convert", expr, _bound.Typeof(type));
+        }
+
+        private BoundExpression TupleConvert(BoundConversion node)
+        {
+            return TupleConvert(Visit(node.Operand), node.Operand.Type, node.Type, node.Conversion);
+        }
+
+        private BoundExpression TupleConvert(BoundExpression operand, TypeSymbol oldType, TypeSymbol newType, Conversion conversion)
+        {
+            Debug.Assert(IsTupleOrNullableTuple(oldType));
+            Debug.Assert(IsTupleOrNullableTuple(newType));
+
+            static bool IsTupleOrNullableTuple(TypeSymbol type)
+            {
+                if (type.IsNullableType())
+                {
+                    type = type.GetNullableUnderlyingType();
+                }
+
+                return type.IsTupleType;
+            }
+
+            BoundExpression GetElementConversions()
+            {
+                var fromType = oldType;
+
+                if (fromType.IsNullableType())
+                {
+                    fromType = fromType.GetNullableUnderlyingType();
+                }
+
+                Debug.Assert(fromType.IsTupleType);
+
+                var toType = newType;
+
+                if (toType.IsNullableType())
+                {
+                    toType = toType.GetNullableUnderlyingType();
+                }
+
+                Debug.Assert(toType.IsTupleType);
+
+                var elementConversions = conversion.UnderlyingConversions;
+
+                if (conversion.Kind == ConversionKind.ImplicitNullable || conversion.Kind == ConversionKind.ExplicitNullable)
+                {
+                    var tupleConversion = elementConversions[0];
+
+                    Debug.Assert(tupleConversion.Kind == ConversionKind.ImplicitTuple || tupleConversion.Kind == ConversionKind.ExplicitTuple);
+
+                    elementConversions = tupleConversion.UnderlyingConversions;
+                }
+
+                var sourceTypes = fromType.TupleElementTypesWithAnnotations;
+                var destTypes = toType.TupleElementTypesWithAnnotations;
+
+                var builder = ArrayBuilder<BoundExpression>.GetInstance(elementConversions.Length);
+
+                for (int i = 0, n = elementConversions.Length; i < n; i++)
+                {
+                    builder.Add(MakeConversionLambda(elementConversions[i], sourceTypes[i].Type, destTypes[i].Type));
+                }
+
+                return _bound.Array(LambdaExpressionTypeType, builder.ToImmutableAndFree());
+            }
+
+            var conversions = GetElementConversions();
+
+            return CSharpExprFactory("TupleConvert", operand, _bound.Typeof(newType), conversions);
         }
 
         private BoundExpression DelegateCreation(BoundExpression receiver, MethodSymbol method, TypeSymbol delegateType, bool requiresInstanceReceiver)
@@ -1964,6 +2110,211 @@ namespace Microsoft.CodeAnalysis.CSharp
             };
 
             return CSharpExprFactory("IndexerAccess", receiver, argument, lengthOrCount, _bound.MethodInfo(indexer));
+        }
+
+        private BoundExpression VisitTupleBinaryOperator(BoundTupleBinaryOperator node)
+        {
+            var left = Visit(node.Left);
+            var right = Visit(node.Right);
+
+            var name = node.OperatorKind.Operator() switch
+            {
+                BinaryOperatorKind.Equal => "TupleEqual",
+                BinaryOperatorKind.NotEqual => "TupleNotEqual",
+                _ => throw ExceptionUtilities.UnexpectedValue(node.OperatorKind)
+            };
+
+            var leftType = node.Left.Type;
+            var rightType = node.Right.Type;
+            var boolType = node.Type;
+            var operatorKind = node.OperatorKind;
+
+            var equalityCheckLambdas = MakeEqualityCheckLambdas(leftType, rightType, node.Operators);
+
+            return CSharpExprFactory(name, left, right, equalityCheckLambdas);
+
+            BoundExpression MakeEqualityCheckLambdas(TypeSymbol leftType, TypeSymbol rightType, TupleBinaryOperatorInfo.Multiple info)
+            {
+                static TypeSymbol RemoveNullable(TypeSymbol type)
+                {
+                    if (type.IsNullableType())
+                    {
+                        return type.GetNullableUnderlyingType();
+                    }
+
+                    return type;
+                }
+
+                leftType = RemoveNullable(leftType);
+                rightType = RemoveNullable(rightType);
+
+                Debug.Assert(leftType.IsTupleType);
+                Debug.Assert(rightType.IsTupleType);
+
+                var leftElementTypes = leftType.TupleElementTypesWithAnnotations.SelectAsArray(t => t.Type);
+                var rightElementTypes = rightType.TupleElementTypesWithAnnotations.SelectAsArray(t => t.Type);
+
+                Debug.Assert(leftElementTypes.Length == rightElementTypes.Length);
+                Debug.Assert(leftElementTypes.Length == info.Operators.Length);
+
+                // CONSIDER: We could reuse parameter symbols across lambdas, or even reuse lambdas if they represent the same equality test, which is very common.
+
+                var builder = ArrayBuilder<BoundExpression>.GetInstance(leftElementTypes.Length);
+
+                for (int i = 0, n = leftElementTypes.Length; i < n; i++)
+                {
+                    var leftElementType = leftElementTypes[i];
+                    var rightElementType = rightElementTypes[i];
+                    var operatorInfo = info.Operators[i];
+
+                    var (leftParameterSymbol, leftParameter, leftParameterExpressionLocalSymbol, leftParameterExpressionLocal, leftAssignParameterExpression) = PushParameter(leftElementType, "left");
+                    var (rightParameterSymbol, rightParameter, rightParameterExpressionLocalSymbol, rightParameterExpressionLocal, rightAssignParameterExpression) = PushParameter(rightElementType, "right");
+
+                    var expr = operatorInfo.InfoKind switch
+                    {
+                        TupleBinaryOperatorInfoKind.Single => GetElementEqualityCheckSingle((TupleBinaryOperatorInfo.Single)operatorInfo, leftParameter, rightParameter),
+                        TupleBinaryOperatorInfoKind.Multiple => GetElementEqualityCheckMultiple((TupleBinaryOperatorInfo.Multiple)operatorInfo, leftParameter, rightParameter),
+                        TupleBinaryOperatorInfoKind.NullNull => GetElementEqualityCheckNullNull((TupleBinaryOperatorInfo.NullNull)operatorInfo, leftParameter, rightParameter),
+                        _ => throw ExceptionUtilities.UnexpectedValue(info.InfoKind)
+                    };
+
+                    var bodyExpr = Visit(expr);
+
+                    PopParameter(rightParameterSymbol);
+                    PopParameter(leftParameterSymbol);
+
+                    var result = _bound.Sequence(
+                            ImmutableArray.Create(leftParameterExpressionLocalSymbol, rightParameterExpressionLocalSymbol),
+                            ImmutableArray.Create<BoundExpression>(
+                                leftAssignParameterExpression,
+                                rightAssignParameterExpression
+                            ),
+                            ExprFactory(
+                                "Lambda",
+                                bodyExpr,
+                                _bound.ArrayOrEmpty(ParameterExpressionType, ImmutableArray.Create<BoundExpression>(leftParameterExpressionLocal, rightParameterExpressionLocal))));
+
+                    builder.Add(result);
+                }
+
+                return _bound.Array(LambdaExpressionTypeType, builder.ToImmutableAndFree());
+
+                (ParameterSymbol parameterSymbol, BoundParameter parameter, LocalSymbol parameterExpressionLocalSymbol, BoundLocal parameterExpressionLocal, BoundAssignmentOperator assignParameterExpression) PushParameter(TypeSymbol type, string name)
+                {
+                    var parameterSymbol = _bound.SynthesizedParameter(type, name);
+                    var parameterParameter = _bound.Parameter(parameterSymbol);
+                    var parameterExpressionLocalSymbol = _bound.SynthesizedLocal(ParameterExpressionType);
+                    var parameterExpressionLocal = _bound.Local(parameterExpressionLocalSymbol);
+                    var parameterExpressionValue = ExprFactory("Parameter", _bound.Typeof(type), _bound.Literal(name));
+                    var assignParameterExpression = _bound.AssignmentExpression(parameterExpressionLocal, parameterExpressionValue);
+
+                    _parameterMap[parameterSymbol] = parameterExpressionLocal;
+
+                    return (parameterSymbol, parameterParameter, parameterExpressionLocalSymbol, parameterExpressionLocal, assignParameterExpression);
+                }
+
+                void PopParameter(ParameterSymbol lambdaParameter)
+                {
+                    _parameterMap.Remove(lambdaParameter);
+                }
+
+                BoundExpression GetElementEqualityCheckSingle(TupleBinaryOperatorInfo.Single operatorInfo, BoundParameter leftParameter, BoundParameter rightParameter)
+                {
+                    if (operatorInfo.Kind.IsDynamic())
+                    {
+                        var dyn = new LoweredDynamicOperationFactory(_bound, methodOrdinal: 0);
+
+                        var dynamicResult = dyn.MakeDynamicBinaryOperatorExpression(operatorKind, leftParameter, rightParameter, isCompoundAssignment: false, _bound.Compilation.DynamicType);
+
+                        if (operatorKind == BinaryOperatorKind.Equal)
+                        {
+                            return _bound.Not(dyn.MakeDynamicUnaryOperatorExpression(UnaryOperatorKind.DynamicFalse, dynamicResult, boolType));
+                        }
+                        else
+                        {
+                            return dyn.MakeDynamicUnaryOperatorExpression(UnaryOperatorKind.DynamicTrue, dynamicResult, boolType);
+                        }
+                    }
+
+                    BoundExpression expr = _bound.Binary(operatorKind, operatorInfo.MethodSymbolOpt?.ReturnType ?? boolType, leftParameter, rightParameter, operatorInfo.MethodSymbolOpt);
+
+                    if (operatorInfo.BoolOperator.Kind != UnaryOperatorKind.Error)
+                    {
+                        var initialConvert = _bound.Convert(operatorInfo.BoolOperator.OperandType, expr, operatorInfo.ConversionForBool);
+
+                        expr = _bound.Unary(operatorInfo.BoolOperator.Kind, boolType, initialConvert, operatorInfo.BoolOperator.Method);
+
+                        if (operatorKind == BinaryOperatorKind.Equal)
+                        {
+                            expr = _bound.Not(expr);
+                        }
+                    }
+                    else if (!operatorInfo.ConversionForBool.IsIdentity)
+                    {
+                        expr = _bound.Convert(boolType, expr, operatorInfo.ConversionForBool);
+                    }
+
+                    return expr;
+                }
+
+                BoundExpression GetElementEqualityCheckMultiple(TupleBinaryOperatorInfo.Multiple operatorInfo, BoundParameter leftParameter, BoundParameter rightParameter)
+                {
+                    return _bound.TupleBinary(operatorKind, boolType, leftParameter, rightParameter, operatorInfo);
+                }
+
+                BoundExpression GetElementEqualityCheckNullNull(TupleBinaryOperatorInfo.NullNull operatorInfo, BoundParameter leftParameter, BoundParameter rightParameter)
+                {
+                    return _bound.Literal(operatorKind == BinaryOperatorKind.Equal);
+                }
+            }
+        }
+
+        private BoundExpression VisitConvertedTupleLiteral(BoundConvertedTupleLiteral node)
+        {
+            var (args, argNames) = GetArgsAndNames(node);
+
+            return CSharpExprFactory("TupleLiteral", _bound.Typeof(node.Type), args, argNames);
+        }
+
+        private BoundExpression VisitTupleLiteral(BoundTupleLiteral node)
+        {
+            throw ExceptionUtilities.Unreachable;
+        }
+
+        private (BoundExpression args, BoundExpression names) GetArgsAndNames(BoundTupleExpression node)
+        {
+            var stringType = _bound.SpecialType(SpecialType.System_String);
+
+            var args = Expressions(node.Arguments);
+
+            BoundExpression argNames;
+
+            if (!node.ArgumentNamesOpt.IsDefault)
+            {
+                var names = ImmutableArray.CreateBuilder<BoundExpression>(node.ArgumentNamesOpt.Length);
+
+                foreach (var argName in node.ArgumentNamesOpt)
+                {
+                    if (argName != null)
+                    {
+                        names.Add(_bound.StringLiteral(argName));
+                    }
+                    else
+                    {
+                        names.Add(_bound.Null(stringType));
+                    }
+                }
+
+                argNames = _bound.ArrayOrEmpty(stringType, names.ToImmutableArray());
+            }
+            else
+            {
+                argNames = _bound.Null(_bound.ArrayType(stringType));
+            }
+
+            // REVIEW: InferredNamesOpt
+
+            return (args, argNames);
         }
     }
 }

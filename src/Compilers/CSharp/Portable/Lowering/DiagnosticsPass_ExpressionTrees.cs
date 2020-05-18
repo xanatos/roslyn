@@ -694,7 +694,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 case ConversionKind.ExplicitTupleLiteral:
                 case ConversionKind.ImplicitTuple:
                 case ConversionKind.ImplicitTupleLiteral:
-                    if (_inExpressionLambda)
+                    if (_inExpressionLambda && !HasCSharpExpression)
                     {
                         Error(ErrorCode.ERR_ExpressionTreeContainsTupleConversion, node);
                     }
@@ -855,7 +855,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         public override BoundNode VisitConvertedTupleLiteral(BoundConvertedTupleLiteral node)
         {
-            if (_inExpressionLambda)
+            if (_inExpressionLambda && !HasCSharpExpression)
             {
                 Error(ErrorCode.ERR_ExpressionTreeContainsTupleLiteral, node);
             }
@@ -865,7 +865,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         public override BoundNode VisitTupleLiteral(BoundTupleLiteral node)
         {
-            if (_inExpressionLambda)
+            if (_inExpressionLambda && !HasCSharpExpression)
             {
                 Error(ErrorCode.ERR_ExpressionTreeContainsTupleLiteral, node);
             }
@@ -875,7 +875,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         public override BoundNode VisitTupleBinaryOperator(BoundTupleBinaryOperator node)
         {
-            if (_inExpressionLambda)
+            if (_inExpressionLambda && !HasCSharpExpression)
             {
                 Error(ErrorCode.ERR_ExpressionTreeContainsTupleBinOp, node);
             }
