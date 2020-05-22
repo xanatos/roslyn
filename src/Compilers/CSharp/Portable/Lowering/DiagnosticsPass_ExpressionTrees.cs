@@ -879,6 +879,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 Error(ErrorCode.ERR_ExpressionTreeContainsTupleBinOp, node);
             }
+            else if (node.Left.Type is null || node.Right.Type is null)
+            {
+                Error(ErrorCode.ERR_ExpressionTreeContainsBadTupleBinary, node);
+            }
 
             return base.VisitTupleBinaryOperator(node);
         }

@@ -2114,58 +2114,49 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         private BoundExpression VisitTupleBinaryOperator(BoundTupleBinaryOperator node)
         {
-            var left = Visit(node.Left);
-            var right = Visit(node.Right);
+            //
+            // NB: node.Left and/or node.Right may not have a type, which happens for cases like
+            //
+            //       (1, null) == (2, null)
+            //
+            //     We reject such cases during the expression tree diagnostic pass because we don't want to deal with
+            //     untyped nodes in expression trees. This is not without precedent, cf. null-coalescing with a null
+            //     or default literal as the left hand side
+            //
+            //       null ?? "bar"
+            //
 
-            var name = node.OperatorKind.Operator() switch
-            {
-                BinaryOperatorKind.Equal => "TupleEqual",
-                BinaryOperatorKind.NotEqual => "TupleNotEqual",
-                _ => throw ExceptionUtilities.UnexpectedValue(node.OperatorKind)
-            };
+            Debug.Assert(node.Left.Type is { });
+            Debug.Assert(node.Right.Type is { });
 
-            var leftType = node.Left.Type;
-            var rightType = node.Right.Type;
             var boolType = node.Type;
             var operatorKind = node.OperatorKind;
 
-            var equalityCheckLambdas = MakeEqualityCheckLambdas(leftType, rightType, node.Operators);
+            var name = operatorKind.Operator() switch
+            {
+                BinaryOperatorKind.Equal => "TupleEqual",
+                BinaryOperatorKind.NotEqual => "TupleNotEqual",
+                _ => throw ExceptionUtilities.UnexpectedValue(operatorKind)
+            };
+
+            var left = Visit(node.Left);
+            var right = Visit(node.Right);
+
+            var equalityCheckLambdas = MakeEqualityCheckLambdas(node.Operators);
 
             return CSharpExprFactory(name, left, right, equalityCheckLambdas);
 
-            BoundExpression MakeEqualityCheckLambdas(TypeSymbol leftType, TypeSymbol rightType, TupleBinaryOperatorInfo.Multiple info)
+            BoundExpression MakeEqualityCheckLambdas(TupleBinaryOperatorInfo.Multiple info)
             {
-                static TypeSymbol RemoveNullable(TypeSymbol type)
-                {
-                    if (type.IsNullableType())
-                    {
-                        return type.GetNullableUnderlyingType();
-                    }
-
-                    return type;
-                }
-
-                leftType = RemoveNullable(leftType);
-                rightType = RemoveNullable(rightType);
-
-                Debug.Assert(leftType.IsTupleType);
-                Debug.Assert(rightType.IsTupleType);
-
-                var leftElementTypes = leftType.TupleElementTypesWithAnnotations.SelectAsArray(t => t.Type);
-                var rightElementTypes = rightType.TupleElementTypesWithAnnotations.SelectAsArray(t => t.Type);
-
-                Debug.Assert(leftElementTypes.Length == rightElementTypes.Length);
-                Debug.Assert(leftElementTypes.Length == info.Operators.Length);
-
                 // CONSIDER: We could reuse parameter symbols across lambdas, or even reuse lambdas if they represent the same equality test, which is very common.
 
-                var builder = ArrayBuilder<BoundExpression>.GetInstance(leftElementTypes.Length);
+                var builder = ArrayBuilder<BoundExpression>.GetInstance(info.Operators.Length);
 
-                for (int i = 0, n = leftElementTypes.Length; i < n; i++)
+                for (int i = 0, n = info.Operators.Length; i < n; i++)
                 {
-                    var leftElementType = leftElementTypes[i];
-                    var rightElementType = rightElementTypes[i];
                     var operatorInfo = info.Operators[i];
+                    var leftElementType = operatorInfo.LeftConvertedTypeOpt;
+                    var rightElementType = operatorInfo.RightConvertedTypeOpt;
 
                     var (leftParameterSymbol, leftParameter, leftParameterExpressionLocalSymbol, leftParameterExpressionLocal, leftAssignParameterExpression) = PushParameter(leftElementType, "left");
                     var (rightParameterSymbol, rightParameter, rightParameterExpressionLocalSymbol, rightParameterExpressionLocal, rightAssignParameterExpression) = PushParameter(rightElementType, "right");
@@ -2174,7 +2165,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     {
                         TupleBinaryOperatorInfoKind.Single => GetElementEqualityCheckSingle((TupleBinaryOperatorInfo.Single)operatorInfo, leftParameter, rightParameter),
                         TupleBinaryOperatorInfoKind.Multiple => GetElementEqualityCheckMultiple((TupleBinaryOperatorInfo.Multiple)operatorInfo, leftParameter, rightParameter),
-                        TupleBinaryOperatorInfoKind.NullNull => GetElementEqualityCheckNullNull((TupleBinaryOperatorInfo.NullNull)operatorInfo, leftParameter, rightParameter),
+                        TupleBinaryOperatorInfoKind.NullNull => GetElementEqualityCheckNullNull(),
                         _ => throw ExceptionUtilities.UnexpectedValue(info.InfoKind)
                     };
 
@@ -2262,7 +2253,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return _bound.TupleBinary(operatorKind, boolType, leftParameter, rightParameter, operatorInfo);
                 }
 
-                BoundExpression GetElementEqualityCheckNullNull(TupleBinaryOperatorInfo.NullNull operatorInfo, BoundParameter leftParameter, BoundParameter rightParameter)
+                BoundExpression GetElementEqualityCheckNullNull()
                 {
                     return _bound.Literal(operatorKind == BinaryOperatorKind.Equal);
                 }
@@ -2271,6 +2262,10 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         private BoundExpression VisitConvertedTupleLiteral(BoundConvertedTupleLiteral node)
         {
+            //
+            // BUG: node may not have a type, e.g. for (1, null) == (2, null).
+            //
+
             var (args, argNames) = GetArgsAndNames(node);
 
             return CSharpExprFactory("TupleLiteral", _bound.Typeof(node.Type), args, argNames);
